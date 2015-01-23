@@ -1,4 +1,4 @@
-# bookeeping
+# BooKeeping
 Version control for your file-system.
 
 # Author

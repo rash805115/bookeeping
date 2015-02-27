@@ -12,9 +12,8 @@ public class Neo4JEmbeddedServiceImplTest extends TestCase
 		this.databaseService = new Neo4JEmbeddedServiceImpl();
 	}
 	
-	public void testAutoIncrement()
+	public void getNextAutoIncrementTest()
 	{
-		System.out.println("Next AutoIncrement: " + this.databaseService.getNextAutoIncrement());
-		assertTrue(this.databaseService.getNextAutoIncrement() > 0);
+		assertTrue(this.databaseService.getNextAutoIncrement() >= 0);
 	}
 }

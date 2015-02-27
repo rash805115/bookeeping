@@ -1,10 +1,11 @@
 package database.service.impl;
 
-import java.util.List;
+import java.util.Map;
 
 import org.neo4j.cypher.javacompat.ExecutionEngine;
 import org.neo4j.cypher.javacompat.ExecutionResult;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 
@@ -29,9 +30,14 @@ public class Neo4JEmbeddedServiceImpl implements DatabaseService
 	public long getNextAutoIncrement()
 	{
 		ExecutionResult executionResult = this.executionEngine.execute("match (autoIncrement:AutoIncrement) return autoIncrement.next");
-		List<String> nextAutoIncrement = executionResult.columns();
+		Map<String, Object> nextAutoIncrement = null;
+		ResourceIterator<Map<String, Object>> result = executionResult.iterator();
+		while(result.hasNext())
+		{
+			nextAutoIncrement = result.next();
+		}
 		
-		if(nextAutoIncrement.size() != 1)
+		if(nextAutoIncrement == null)
 		{
 			try(Transaction transaction = this.graphDatabaseService.beginTx())
 			{
@@ -51,7 +57,7 @@ public class Neo4JEmbeddedServiceImpl implements DatabaseService
 			{
 				executionResult = this.executionEngine.execute("match (autoIncrement:AutoIncrement) set autoIncrement.next = autoIncrement.next + 1");
 				transaction.success();
-				return Long.parseLong(nextAutoIncrement.get(0));
+				return (long) nextAutoIncrement.get("autoIncrement.next");
 			}
 			catch(Exception exception)
 			{
@@ -59,10 +65,5 @@ public class Neo4JEmbeddedServiceImpl implements DatabaseService
 				return -1;
 			}
 		}
-	}
-	
-	public static void main(String args[])
-	{
-		new Neo4JEmbeddedServiceImpl();
 	}
 }

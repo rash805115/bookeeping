@@ -1,47 +1,59 @@
 package database.service.impl;
 
-import java.util.Map;
-
-import org.neo4j.cypher.javacompat.ExecutionEngine;
-import org.neo4j.cypher.javacompat.ExecutionResult;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.graphdb.index.ReadableIndex;
 
 import utilities.configurationproperties.DatabaseConnectionProperty;
 import database.service.DatabaseService;
 
 public class Neo4JEmbeddedServiceImpl implements DatabaseService
 {
+	private enum Labels implements Label
+	{
+		AutoIncrement
+	}
+	
 	private GraphDatabaseService graphDatabaseService;
-	private ExecutionEngine executionEngine;
 	
 	public Neo4JEmbeddedServiceImpl()
 	{
 		DatabaseConnectionProperty databaseConnectionProperty = new DatabaseConnectionProperty();
 		String databaseLocation = databaseConnectionProperty.getProperty("Neo4JEmbeddedDatabaseLocation");
 		
-		this.graphDatabaseService = new GraphDatabaseFactory().newEmbeddedDatabase(databaseLocation);
-		this.executionEngine = new ExecutionEngine(this.graphDatabaseService);
+		this.graphDatabaseService = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(databaseLocation)
+									.setConfig(GraphDatabaseSettings.node_keys_indexable, "nodeId")
+									.setConfig(GraphDatabaseSettings.node_auto_indexing, "true")
+									.newGraphDatabase();
 	}
 
 	@Override
 	public long getNextAutoIncrement()
 	{
-		ExecutionResult executionResult = this.executionEngine.execute("match (autoIncrement:AutoIncrement {nodeId: 0}) return autoIncrement.next");
-		Map<String, Object> nextAutoIncrement = null;
-		ResourceIterator<Map<String, Object>> result = executionResult.iterator();
-		while(result.hasNext())
+		Node autoIncrement = null;
+		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			nextAutoIncrement = result.next();
+			ReadableIndex<Node> readableIndex = this.graphDatabaseService.index().getNodeAutoIndexer().getAutoIndex();
+			autoIncrement = readableIndex.get("nodeId", 0).getSingle();
+		}
+		catch(Exception exception)
+		{
+			exception.printStackTrace();
+			return -1;
 		}
 		
-		if(nextAutoIncrement == null)
+		if(autoIncrement == null)
 		{
 			try(Transaction transaction = this.graphDatabaseService.beginTx())
 			{
-				this.executionEngine.execute("create (autoIncrement:AutoIncrement {nodeId: 0, next: 1})");
+				Node node = this.graphDatabaseService.createNode(Labels.AutoIncrement);
+				node.setProperty("nodeId", 0);
+				node.setProperty("next", 1);
+				
 				transaction.success();
 				return 0;
 			}
@@ -55,9 +67,11 @@ public class Neo4JEmbeddedServiceImpl implements DatabaseService
 		{
 			try(Transaction transaction = this.graphDatabaseService.beginTx())
 			{
-				this.executionEngine.execute("match (autoIncrement:AutoIncrement {nodeId: 0}) set autoIncrement.next = autoIncrement.next + 1");
+				Integer nextAutoIncrement = (Integer) autoIncrement.getProperty("next");
+				autoIncrement.setProperty("next", nextAutoIncrement + 1);
+				
 				transaction.success();
-				return (long) nextAutoIncrement.get("autoIncrement.next");
+				return nextAutoIncrement.longValue();
 			}
 			catch(Exception exception)
 			{

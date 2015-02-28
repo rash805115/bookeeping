@@ -6,10 +6,12 @@ import org.apache.commons.configuration.BaseConfiguration;
 
 import utilities.configurationproperties.DatabaseConnectionProperty;
 
+import com.thinkaurelius.titan.core.PropertyKey;
+import com.thinkaurelius.titan.core.TitanException;
 import com.thinkaurelius.titan.core.TitanFactory;
 import com.thinkaurelius.titan.core.TitanGraph;
+import com.thinkaurelius.titan.core.schema.TitanManagement;
 import com.tinkerpop.blueprints.Vertex;
-import com.tinkerpop.gremlin.java.GremlinPipeline;
 
 import database.service.DatabaseService;
 
@@ -28,38 +30,62 @@ public class TitanEmbeddedServiceImpl implements DatabaseService
 		baseConfiguration.setProperty("storage.hostname", databaseHostname);
 		
 		this.titanGraph = TitanFactory.open(baseConfiguration);
+		this.setupGraph();
+	}
+	
+	private void setupGraph()
+	{
+		TitanManagement titanManagement = this.titanGraph.getManagementSystem();
+		
+		try
+		{
+			if(! this.titanGraph.containsVertexLabel("AutoIncrement"))
+			{
+				titanManagement.makeVertexLabel("AutoIncrement").make();
+			}
+			
+			if(! this.titanGraph.containsPropertyKey("nodeIdPropertyKey"))
+			{
+				PropertyKey nodeIdPropertyKey = titanManagement.makePropertyKey("nodeIdPropertyKey").dataType(Long.class).make();
+				titanManagement.buildIndex("nodeIdIndex", Vertex.class).addKey(nodeIdPropertyKey).unique().buildCompositeIndex();
+			}
+		}
+		catch(TitanException titanException)
+		{
+			System.out.println("ERROR: Unable to setup titan graph.");
+			titanException.printStackTrace();
+			System.exit(1);
+		}
+		
+		titanManagement.commit();
 	}
 
 	@Override
 	public long getNextAutoIncrement()
 	{
-		//get the autoIncrement vertex. This one right here is just a dummy.
-		//what should be the next type of gremlinPipeline
-		//will transaction throw an error on failure?
-		//will value returned from next increment be an int or long?
-		Iterator<Vertex> iterator = new GremlinPipeline<Vertex, Iterator<Vertex>>().start(this.titanGraph.getVertex(0)).iterator();
-		Vertex nextAutoIncrement = null;
+		Iterator<Vertex> iterator = this.titanGraph.getVertices("nodeId", 0).iterator();
+		Vertex autoIncrement = null;
 		while(iterator.hasNext())
 		{
-			nextAutoIncrement = iterator.next();
+			autoIncrement = iterator.next();
 		}
 		
-		if(nextAutoIncrement == null)
+		if(autoIncrement == null)
 		{
 			try
 			{
-				this.titanGraph.buildTransaction();
+				this.titanGraph.newTransaction();
 				
-				Vertex vertex = this.titanGraph.addVertex(null);
-				vertex.setProperty("next", 0);
+				Vertex vertex = this.titanGraph.addVertexWithLabel("AutoIncrement");
+				vertex.setProperty("nodeId", 0);
+				vertex.setProperty("next", 1);
 				
 				this.titanGraph.commit();
-				
 				return 0;
 			}
-			catch(Exception exception)
+			catch(TitanException titanException)
 			{
-				exception.printStackTrace();
+				titanException.printStackTrace();
 				return -1;
 			}
 		}
@@ -67,18 +93,17 @@ public class TitanEmbeddedServiceImpl implements DatabaseService
 		{
 			try
 			{
-				this.titanGraph.buildTransaction();
+				this.titanGraph.newTransaction();
 				
-				long nextIncrement = nextAutoIncrement.getProperty("next");
-				nextAutoIncrement.setProperty("next", nextIncrement + 1);
+				Integer nextIncrement = autoIncrement.getProperty("next");
+				autoIncrement.setProperty("next", nextIncrement + 1);
 				
 				this.titanGraph.commit();
-				
-				return nextIncrement;
+				return nextIncrement.longValue();
 			}
-			catch(Exception exception)
+			catch(TitanException titanException)
 			{
-				exception.printStackTrace();
+				titanException.printStackTrace();
 				return -1;
 			}
 		}

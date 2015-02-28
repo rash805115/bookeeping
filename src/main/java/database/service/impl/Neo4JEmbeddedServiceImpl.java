@@ -29,7 +29,7 @@ public class Neo4JEmbeddedServiceImpl implements DatabaseService
 	@Override
 	public long getNextAutoIncrement()
 	{
-		ExecutionResult executionResult = this.executionEngine.execute("match (autoIncrement:AutoIncrement) return autoIncrement.next");
+		ExecutionResult executionResult = this.executionEngine.execute("match (autoIncrement:AutoIncrement {nodeId: 0}) return autoIncrement.next");
 		Map<String, Object> nextAutoIncrement = null;
 		ResourceIterator<Map<String, Object>> result = executionResult.iterator();
 		while(result.hasNext())
@@ -41,7 +41,7 @@ public class Neo4JEmbeddedServiceImpl implements DatabaseService
 		{
 			try(Transaction transaction = this.graphDatabaseService.beginTx())
 			{
-				this.executionEngine.execute("create (autoIncrement:AutoIncrement {next: 0})");
+				this.executionEngine.execute("create (autoIncrement:AutoIncrement {nodeId: 0, next: 1})");
 				transaction.success();
 				return 0;
 			}
@@ -55,7 +55,7 @@ public class Neo4JEmbeddedServiceImpl implements DatabaseService
 		{
 			try(Transaction transaction = this.graphDatabaseService.beginTx())
 			{
-				this.executionEngine.execute("match (autoIncrement:AutoIncrement) set autoIncrement.next = autoIncrement.next + 1");
+				this.executionEngine.execute("match (autoIncrement:AutoIncrement {nodeId: 0}) set autoIncrement.next = autoIncrement.next + 1");
 				transaction.success();
 				return (long) nextAutoIncrement.get("autoIncrement.next");
 			}

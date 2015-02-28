@@ -28,7 +28,7 @@ public class Neo4JRestServiceImpl implements DatabaseService
 	@Override
 	public long getNextAutoIncrement()
 	{
-		QueryResult<Map<String,Object>> queryResult = this.restCypherQueryEngine.query("match (autoIncrement:AutoIncrement) return autoIncrement.next", null);
+		QueryResult<Map<String,Object>> queryResult = this.restCypherQueryEngine.query("match (autoIncrement:AutoIncrement {nodeId: 0}) return autoIncrement.next", null);
 		Map<String, Object> nextAutoIncrement = null;
 		Iterator<Map<String, Object>> result = queryResult.iterator();
 		while(result.hasNext())
@@ -40,7 +40,7 @@ public class Neo4JRestServiceImpl implements DatabaseService
 		{
 			try(Transaction transaction = this.restGraphDatabase.beginTx())
 			{
-				this.restCypherQueryEngine.query("create (autoIncrement:AutoIncrement {next: 0})", null);
+				this.restCypherQueryEngine.query("create (autoIncrement:AutoIncrement {nodeId: 0, next: 1})", null);
 				transaction.success();
 				return 0;
 			}
@@ -54,7 +54,7 @@ public class Neo4JRestServiceImpl implements DatabaseService
 		{
 			try(Transaction transaction = this.restGraphDatabase.beginTx())
 			{
-				this.restCypherQueryEngine.query("match (autoIncrement:AutoIncrement) set autoIncrement.next = autoIncrement.next + 1", null);
+				this.restCypherQueryEngine.query("match (autoIncrement:AutoIncrement {nodeId: 0}) set autoIncrement.next = autoIncrement.next + 1", null);
 				transaction.success();
 				Integer nextIncrement = (Integer) nextAutoIncrement.get("autoIncrement.next");
 				return nextIncrement.longValue();

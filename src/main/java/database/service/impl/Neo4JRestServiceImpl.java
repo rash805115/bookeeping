@@ -51,7 +51,7 @@ public class Neo4JRestServiceImpl implements DatabaseService
 	}
 
 	@Override
-	public long getNextAutoIncrement()
+	public int getNextAutoIncrement()
 	{
 		Node autoIncrement = null;
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
@@ -86,11 +86,11 @@ public class Neo4JRestServiceImpl implements DatabaseService
 		{
 			try(Transaction transaction = this.graphDatabaseService.beginTx())
 			{
-				Integer nextAutoIncrement = (Integer) autoIncrement.getProperty("next");
+				int nextAutoIncrement = (int) autoIncrement.getProperty("next");
 				autoIncrement.setProperty("next", nextAutoIncrement + 1);
 				
 				transaction.success();
-				return nextAutoIncrement.longValue();
+				return nextAutoIncrement;
 			}
 			catch(Exception exception)
 			{

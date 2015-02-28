@@ -61,7 +61,7 @@ public class TitanEmbeddedServiceImpl implements DatabaseService
 	}
 
 	@Override
-	public long getNextAutoIncrement()
+	public int getNextAutoIncrement()
 	{
 		Iterator<Vertex> iterator = this.titanGraph.getVertices("nodeId", 0).iterator();
 		Vertex autoIncrement = null;
@@ -95,11 +95,11 @@ public class TitanEmbeddedServiceImpl implements DatabaseService
 			{
 				this.titanGraph.newTransaction();
 				
-				Integer nextIncrement = autoIncrement.getProperty("next");
+				int nextIncrement = autoIncrement.getProperty("next");
 				autoIncrement.setProperty("next", nextIncrement + 1);
 				
 				this.titanGraph.commit();
-				return nextIncrement.longValue();
+				return nextIncrement;
 			}
 			catch(TitanException titanException)
 			{

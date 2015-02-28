@@ -1,46 +1,78 @@
 package database.service.impl;
 
-import java.util.Iterator;
-import java.util.Map;
-
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.index.AutoIndexer;
+import org.neo4j.graphdb.index.ReadableIndex;
 import org.neo4j.rest.graphdb.RestGraphDatabase;
-import org.neo4j.rest.graphdb.query.RestCypherQueryEngine;
-import org.neo4j.rest.graphdb.util.QueryResult;
 
 import utilities.configurationproperties.DatabaseConnectionProperty;
+
+import com.thinkaurelius.titan.core.TitanException;
+
 import database.service.DatabaseService;
 
 public class Neo4JRestServiceImpl implements DatabaseService
 {
-	private RestGraphDatabase restGraphDatabase;
-	private RestCypherQueryEngine restCypherQueryEngine;
+	private enum Labels implements Label
+	{
+		AutoIncrement
+	}
+	
+	private GraphDatabaseService graphDatabaseService;
 	
 	public Neo4JRestServiceImpl()
 	{
 		DatabaseConnectionProperty databaseConnectionProperty = new DatabaseConnectionProperty();
 		String restEndpoint = databaseConnectionProperty.getProperty("Neo4JRestEndpoint");
 		
-		this.restGraphDatabase = new RestGraphDatabase(restEndpoint);
-		this.restCypherQueryEngine = new RestCypherQueryEngine(this.restGraphDatabase.getRestAPI());
+		this.graphDatabaseService = new RestGraphDatabase(restEndpoint);
+		this.setupGraph();
+	}
+	
+	private void setupGraph()
+	{
+		try(Transaction transaction = this.graphDatabaseService.beginTx())
+		{
+			AutoIndexer<Node> autoIndexer = this.graphDatabaseService.index().getNodeAutoIndexer();
+			autoIndexer.startAutoIndexingProperty("nodeId");
+			autoIndexer.setEnabled(true);
+			
+			transaction.success();
+		}
+		catch(TitanException titanException)
+		{
+			System.out.println("ERROR: Unable to setup neo4j-rest graph.");
+			titanException.printStackTrace();
+			System.exit(1);
+		}
 	}
 
 	@Override
 	public long getNextAutoIncrement()
 	{
-		QueryResult<Map<String,Object>> queryResult = this.restCypherQueryEngine.query("match (autoIncrement:AutoIncrement {nodeId: 0}) return autoIncrement.next", null);
-		Map<String, Object> nextAutoIncrement = null;
-		Iterator<Map<String, Object>> result = queryResult.iterator();
-		while(result.hasNext())
+		Node autoIncrement = null;
+		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			nextAutoIncrement = result.next();
+			ReadableIndex<Node> readableIndex = this.graphDatabaseService.index().getNodeAutoIndexer().getAutoIndex();
+			autoIncrement = readableIndex.get("nodeId", 0).getSingle();
+		}
+		catch(Exception exception)
+		{
+			exception.printStackTrace();
+			return -1;
 		}
 		
-		if(nextAutoIncrement == null)
+		if(autoIncrement == null)
 		{
-			try(Transaction transaction = this.restGraphDatabase.beginTx())
+			try(Transaction transaction = this.graphDatabaseService.beginTx())
 			{
-				this.restCypherQueryEngine.query("create (autoIncrement:AutoIncrement {nodeId: 0, next: 1})", null);
+				Node node = this.graphDatabaseService.createNode(Labels.AutoIncrement);
+				node.setProperty("nodeId", 0);
+				node.setProperty("next", 1);
+				
 				transaction.success();
 				return 0;
 			}
@@ -52,12 +84,13 @@ public class Neo4JRestServiceImpl implements DatabaseService
 		}
 		else
 		{
-			try(Transaction transaction = this.restGraphDatabase.beginTx())
+			try(Transaction transaction = this.graphDatabaseService.beginTx())
 			{
-				this.restCypherQueryEngine.query("match (autoIncrement:AutoIncrement {nodeId: 0}) set autoIncrement.next = autoIncrement.next + 1", null);
+				Integer nextAutoIncrement = (Integer) autoIncrement.getProperty("next");
+				autoIncrement.setProperty("next", nextAutoIncrement + 1);
+				
 				transaction.success();
-				Integer nextIncrement = (Integer) nextAutoIncrement.get("autoIncrement.next");
-				return nextIncrement.longValue();
+				return nextAutoIncrement.longValue();
 			}
 			catch(Exception exception)
 			{

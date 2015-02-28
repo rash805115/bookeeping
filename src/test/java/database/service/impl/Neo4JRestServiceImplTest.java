@@ -14,6 +14,8 @@ public class Neo4JRestServiceImplTest extends TestCase
 	
 	public void testGetNextAutoIncrement()
 	{
-		assertTrue(this.databaseService.getNextAutoIncrement() >= 0);
+		long nextAutoIncrement1 = this.databaseService.getNextAutoIncrement();
+		long nextAutoIncrement2 = this.databaseService.getNextAutoIncrement();
+		assertEquals(nextAutoIncrement1 + 1, nextAutoIncrement2);
 	}
 }

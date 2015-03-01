@@ -51,10 +51,10 @@ public class Neo4JEmbeddedServiceImpl implements DatabaseService
 			{
 				Node node = this.graphDatabaseService.createNode(Labels.AutoIncrement);
 				node.setProperty("nodeId", 0);
-				node.setProperty("next", 1);
+				node.setProperty("next", 2);
 				
 				transaction.success();
-				return 0;
+				return 1;
 			}
 			else
 			{

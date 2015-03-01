@@ -5,17 +5,11 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.commons.configuration.BaseConfiguration;
-
-import utilities.configurationproperties.DatabaseConnectionProperty;
-
-import com.thinkaurelius.titan.core.PropertyKey;
-import com.thinkaurelius.titan.core.TitanFactory;
 import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.TitanTransaction;
-import com.thinkaurelius.titan.core.schema.TitanManagement;
 import com.tinkerpop.blueprints.Vertex;
 
+import database.connection.singleton.TitanEmbeddedConnection;
 import database.service.DatabaseService;
 import exception.DuplicateUser;
 import exception.UserNotFound;
@@ -26,55 +20,7 @@ public class TitanEmbeddedServiceImpl implements DatabaseService
 	
 	public TitanEmbeddedServiceImpl()
 	{
-		DatabaseConnectionProperty databaseConnectionProperty = new DatabaseConnectionProperty();
-		String databaseBackend = databaseConnectionProperty.getProperty("TitanEmbeddedServerBackend");
-		String databaseHostname = databaseConnectionProperty.getProperty("TitanEmbeddedServerHostname");
-		
-		BaseConfiguration baseConfiguration = new BaseConfiguration();
-		baseConfiguration.setProperty("storage.backend", databaseBackend);
-		baseConfiguration.setProperty("storage.hostname", databaseHostname);
-		
-		this.titanGraph = TitanFactory.open(baseConfiguration);
-		this.setupGraph();
-	}
-	
-	private void setupGraph()
-	{
-		TitanManagement titanManagement = this.titanGraph.getManagementSystem();
-		
-		try
-		{
-			if(! this.titanGraph.containsVertexLabel("AutoIncrement"))
-			{
-				titanManagement.makeVertexLabel("AutoIncrement").make();
-			}
-			
-			if(! this.titanGraph.containsVertexLabel("User"))
-			{
-				titanManagement.makeVertexLabel("User").make();
-			}
-			
-			if(! this.titanGraph.containsPropertyKey("nodeId"))
-			{
-				PropertyKey nodeIdPropertyKey = titanManagement.makePropertyKey("nodeId").dataType(Integer.class).make();
-				titanManagement.buildIndex("nodeIdIndex", Vertex.class).addKey(nodeIdPropertyKey).unique().buildCompositeIndex();
-			}
-			
-			if(! this.titanGraph.containsPropertyKey("userId"))
-			{
-				PropertyKey userIdPropertyKey = titanManagement.makePropertyKey("userId").dataType(String.class).make();
-				titanManagement.buildIndex("userIdIndex", Vertex.class).addKey(userIdPropertyKey).unique().buildCompositeIndex();
-			}
-			
-			titanManagement.commit();
-		}
-		finally
-		{
-			if(titanManagement.isOpen())
-			{
-				titanManagement.rollback();
-			}
-		}
+		this.titanGraph = TitanEmbeddedConnection.getInstance().getTitanGraphObject();
 	}
 
 	@Override

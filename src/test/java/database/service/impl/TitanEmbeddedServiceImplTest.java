@@ -8,8 +8,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import database.service.DatabaseService;
@@ -18,25 +18,25 @@ import exception.UserNotFound;
 
 public class TitanEmbeddedServiceImplTest
 {
-	private static DatabaseService databaseService;
+	private DatabaseService databaseService;
 	
-	@BeforeClass
-	public static void globalSetup()
+	@Before
+	public void setup()
 	{
-		TitanEmbeddedServiceImplTest.databaseService = new TitanEmbeddedServiceImpl();
+		this.databaseService = new TitanEmbeddedServiceImpl();
 	}
 	
-	@AfterClass
-	public static void globalTearDown()
+	@After
+	public void tearDown()
 	{
-		TitanEmbeddedServiceImplTest.databaseService = null;
+		this.databaseService = null;
 	}
 	
 	@Test
 	public void testGetNextAutoIncrement()
 	{
-		long nextAutoIncrement1 = TitanEmbeddedServiceImplTest.databaseService.getNextAutoIncrement();
-		long nextAutoIncrement2 = TitanEmbeddedServiceImplTest.databaseService.getNextAutoIncrement();
+		long nextAutoIncrement1 = this.databaseService.getNextAutoIncrement();
+		long nextAutoIncrement2 = this.databaseService.getNextAutoIncrement();
 		assertEquals(nextAutoIncrement1 + 1, nextAutoIncrement2);
 	}
 	
@@ -51,7 +51,7 @@ public class TitanEmbeddedServiceImplTest
 		
 		try
 		{
-			TitanEmbeddedServiceImplTest.databaseService.getUser(userId);
+			this.databaseService.getUser(userId);
 			assertFalse("Expected Exception UserNotFound. Got none!", true);
 		}
 		catch(UserNotFound userNotFound)
@@ -61,7 +61,7 @@ public class TitanEmbeddedServiceImplTest
 		
 		try
 		{
-			TitanEmbeddedServiceImplTest.databaseService.createNewUser(userId, userProperties);
+			this.databaseService.createNewUser(userId, userProperties);
 			assertTrue(true);
 		}
 		catch(DuplicateUser duplicateUser)
@@ -71,7 +71,7 @@ public class TitanEmbeddedServiceImplTest
 		
 		try
 		{
-			TitanEmbeddedServiceImplTest.databaseService.createNewUser(userId, userProperties);
+			this.databaseService.createNewUser(userId, userProperties);
 			assertFalse("Expected Exception DuplicateUser. Got none!", true);
 		}
 		catch(DuplicateUser duplicateUser)
@@ -81,7 +81,7 @@ public class TitanEmbeddedServiceImplTest
 		
 		try
 		{
-			Map<String, Object> retrievedUserProperties = TitanEmbeddedServiceImplTest.databaseService.getUser(userId);
+			Map<String, Object> retrievedUserProperties = this.databaseService.getUser(userId);
 			for(Entry<String, Object> entry : userProperties.entrySet())
 			{
 				String key = entry.getKey();

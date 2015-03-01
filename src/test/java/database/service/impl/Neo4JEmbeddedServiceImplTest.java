@@ -8,8 +8,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import database.service.DatabaseService;
@@ -18,25 +18,25 @@ import exception.UserNotFound;
 
 public class Neo4JEmbeddedServiceImplTest
 {
-	private static DatabaseService databaseService;
+	private DatabaseService databaseService;
 	
-	@BeforeClass
-	public static void globalSetup()
+	@Before
+	public void setup()
 	{
-		Neo4JEmbeddedServiceImplTest.databaseService = new Neo4JEmbeddedServiceImpl();
+		this.databaseService = new Neo4JEmbeddedServiceImpl();
 	}
 	
-	@AfterClass
-	public static void globalTearDown()
+	@After
+	public void tearDown()
 	{
-		Neo4JEmbeddedServiceImplTest.databaseService = null;
+		this.databaseService = null;
 	}
 	
 	@Test
 	public void testGetNextAutoIncrement()
 	{
-		long nextAutoIncrement1 = Neo4JEmbeddedServiceImplTest.databaseService.getNextAutoIncrement();
-		long nextAutoIncrement2 = Neo4JEmbeddedServiceImplTest.databaseService.getNextAutoIncrement();
+		long nextAutoIncrement1 = this.databaseService.getNextAutoIncrement();
+		long nextAutoIncrement2 = this.databaseService.getNextAutoIncrement();
 		
 		assertEquals(nextAutoIncrement1 + 1, nextAutoIncrement2);
 	}
@@ -52,7 +52,7 @@ public class Neo4JEmbeddedServiceImplTest
 		
 		try
 		{
-			Neo4JEmbeddedServiceImplTest.databaseService.getUser(userId);
+			this.databaseService.getUser(userId);
 			assertFalse("Expected Exception UserNotFound. Got none!", true);
 		}
 		catch(UserNotFound userNotFound)
@@ -62,7 +62,7 @@ public class Neo4JEmbeddedServiceImplTest
 		
 		try
 		{
-			Neo4JEmbeddedServiceImplTest.databaseService.createNewUser(userId, userProperties);
+			this.databaseService.createNewUser(userId, userProperties);
 			assertTrue(true);
 		}
 		catch(DuplicateUser duplicateUser)
@@ -72,7 +72,7 @@ public class Neo4JEmbeddedServiceImplTest
 		
 		try
 		{
-			Neo4JEmbeddedServiceImplTest.databaseService.createNewUser(userId, userProperties);
+			this.databaseService.createNewUser(userId, userProperties);
 			assertFalse("Expected Exception DuplicateUser. Got none!", true);
 		}
 		catch(DuplicateUser duplicateUser)
@@ -82,7 +82,7 @@ public class Neo4JEmbeddedServiceImplTest
 		
 		try
 		{
-			Map<String, Object> retrievedUserProperties = Neo4JEmbeddedServiceImplTest.databaseService.getUser(userId);
+			Map<String, Object> retrievedUserProperties = this.databaseService.getUser(userId);
 			for(Entry<String, Object> entry : userProperties.entrySet())
 			{
 				String key = entry.getKey();

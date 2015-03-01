@@ -8,11 +8,9 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.index.ReadableIndex;
 
-import utilities.configurationproperties.DatabaseConnectionProperty;
+import database.connection.singleton.Neo4JEmbeddedConnection;
 import database.service.DatabaseService;
 import exception.DuplicateUser;
 import exception.UserNotFound;
@@ -28,14 +26,7 @@ public class Neo4JEmbeddedServiceImpl implements DatabaseService
 	
 	public Neo4JEmbeddedServiceImpl()
 	{
-		DatabaseConnectionProperty databaseConnectionProperty = new DatabaseConnectionProperty();
-		String databaseLocation = databaseConnectionProperty.getProperty("Neo4JEmbeddedDatabaseLocation");
-		
-		this.graphDatabaseService = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(databaseLocation)
-									.setConfig(GraphDatabaseSettings.node_keys_indexable, "nodeId")
-									.setConfig(GraphDatabaseSettings.node_keys_indexable, "userId")
-									.setConfig(GraphDatabaseSettings.node_auto_indexing, "true")
-									.newGraphDatabase();
+		this.graphDatabaseService = Neo4JEmbeddedConnection.getInstance().getGraphDatabaseServiceObject();
 	}
 
 	@Override

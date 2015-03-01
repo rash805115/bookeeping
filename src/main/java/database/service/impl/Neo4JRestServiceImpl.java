@@ -8,11 +8,9 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.index.AutoIndexer;
 import org.neo4j.graphdb.index.ReadableIndex;
-import org.neo4j.rest.graphdb.RestGraphDatabase;
 
-import utilities.configurationproperties.DatabaseConnectionProperty;
+import database.connection.singleton.Neo4JRestConnection;
 import database.service.DatabaseService;
 import exception.DuplicateUser;
 import exception.UserNotFound;
@@ -28,24 +26,7 @@ public class Neo4JRestServiceImpl implements DatabaseService
 	
 	public Neo4JRestServiceImpl()
 	{
-		DatabaseConnectionProperty databaseConnectionProperty = new DatabaseConnectionProperty();
-		String restEndpoint = databaseConnectionProperty.getProperty("Neo4JRestEndpoint");
-		
-		this.graphDatabaseService = new RestGraphDatabase(restEndpoint);
-		this.setupGraph();
-	}
-	
-	private void setupGraph()
-	{
-		try(Transaction transaction = this.graphDatabaseService.beginTx())
-		{
-			AutoIndexer<Node> autoIndexer = this.graphDatabaseService.index().getNodeAutoIndexer();
-			autoIndexer.startAutoIndexingProperty("nodeId");
-			autoIndexer.startAutoIndexingProperty("userId");
-			autoIndexer.setEnabled(true);
-			
-			transaction.success();
-		}
+		this.graphDatabaseService = Neo4JRestConnection.getInstance().getGraphDatabaseServiceObject();
 	}
 
 	@Override

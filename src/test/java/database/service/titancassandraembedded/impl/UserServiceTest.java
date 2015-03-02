@@ -1,6 +1,5 @@
-package database.service.impl;
+package database.service.titancassandraembedded.impl;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -12,32 +11,24 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import database.service.DatabaseService;
+import database.service.UserService;
 import exception.DuplicateUser;
 import exception.UserNotFound;
 
-public class TitanEmbeddedServiceImplTest
+public class UserServiceTest
 {
-	private DatabaseService databaseService;
+	private UserService userService;
 	
 	@Before
 	public void setup()
 	{
-		this.databaseService = new TitanEmbeddedServiceImpl();
+		this.userService = new UserServiceImpl();
 	}
 	
 	@After
 	public void tearDown()
 	{
-		this.databaseService = null;
-	}
-	
-	@Test
-	public void testGetNextAutoIncrement()
-	{
-		long nextAutoIncrement1 = this.databaseService.getNextAutoIncrement();
-		long nextAutoIncrement2 = this.databaseService.getNextAutoIncrement();
-		assertEquals(nextAutoIncrement1 + 1, nextAutoIncrement2);
+		this.userService = null;
 	}
 	
 	@Test
@@ -51,7 +42,7 @@ public class TitanEmbeddedServiceImplTest
 		
 		try
 		{
-			this.databaseService.getUser(userId);
+			this.userService.getUser(userId);
 			assertFalse("Expected Exception UserNotFound. Got none!", true);
 		}
 		catch(UserNotFound userNotFound)
@@ -61,7 +52,7 @@ public class TitanEmbeddedServiceImplTest
 		
 		try
 		{
-			this.databaseService.createNewUser(userId, userProperties);
+			this.userService.createNewUser(userId, userProperties);
 			assertTrue(true);
 		}
 		catch(DuplicateUser duplicateUser)
@@ -71,7 +62,7 @@ public class TitanEmbeddedServiceImplTest
 		
 		try
 		{
-			this.databaseService.createNewUser(userId, userProperties);
+			this.userService.createNewUser(userId, userProperties);
 			assertFalse("Expected Exception DuplicateUser. Got none!", true);
 		}
 		catch(DuplicateUser duplicateUser)
@@ -81,7 +72,7 @@ public class TitanEmbeddedServiceImplTest
 		
 		try
 		{
-			Map<String, Object> retrievedUserProperties = this.databaseService.getUser(userId);
+			Map<String, Object> retrievedUserProperties = this.userService.getUser(userId);
 			for(Entry<String, Object> entry : userProperties.entrySet())
 			{
 				String key = entry.getKey();

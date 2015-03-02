@@ -10,16 +10,16 @@ import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.schema.TitanManagement;
 import com.tinkerpop.blueprints.Vertex;
 
-public class TitanEmbeddedConnection
+public class TitanCassandraEmbeddedConnection
 {
-	private static TitanEmbeddedConnection titanEmbeddedConnection;
+	private static TitanCassandraEmbeddedConnection titanCassandraEmbeddedConnection;
 	private TitanGraph titanGraph;
 	
-	private TitanEmbeddedConnection()
+	private TitanCassandraEmbeddedConnection()
 	{
 		DatabaseConnectionProperty databaseConnectionProperty = new DatabaseConnectionProperty();
-		String databaseBackend = databaseConnectionProperty.getProperty("TitanEmbeddedServerBackend");
-		String databaseHostname = databaseConnectionProperty.getProperty("TitanEmbeddedServerHostname");
+		String databaseBackend = databaseConnectionProperty.getProperty("TitanCassandraEmbeddedServerBackend");
+		String databaseHostname = databaseConnectionProperty.getProperty("TitanCassandraEmbeddedServerHostname");
 		
 		BaseConfiguration baseConfiguration = new BaseConfiguration();
 		baseConfiguration.setProperty("storage.backend", databaseBackend);
@@ -68,14 +68,14 @@ public class TitanEmbeddedConnection
 		}
 	}
 	
-	public static TitanEmbeddedConnection getInstance()
+	public static TitanCassandraEmbeddedConnection getInstance()
 	{
-		if(TitanEmbeddedConnection.titanEmbeddedConnection == null)
+		if(TitanCassandraEmbeddedConnection.titanCassandraEmbeddedConnection == null)
 		{
-			TitanEmbeddedConnection.titanEmbeddedConnection = new TitanEmbeddedConnection();
+			TitanCassandraEmbeddedConnection.titanCassandraEmbeddedConnection = new TitanCassandraEmbeddedConnection();
 		}
 		
-		return TitanEmbeddedConnection.titanEmbeddedConnection;
+		return TitanCassandraEmbeddedConnection.titanCassandraEmbeddedConnection;
 	}
 	
 	public TitanGraph getTitanGraphObject()

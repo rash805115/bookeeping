@@ -173,39 +173,4 @@ public class UserServiceImpl implements UserService
 		
 		return list;
 	}
-	
-	public static void main(String args[]) throws DuplicateUser, UserNotFound
-	{
-		Map<String, Object> userProperties = new HashMap<String, Object>();
-		userProperties.put("firstName", "Rahul");
-		userProperties.put("lastName", "Anant");
-		
-		/*new UserServiceImpl().createNewUser("u3", userProperties);
-		new UserServiceImpl().createNewUser("u4", userProperties);*/
-		
-		System.out.println(new UserServiceImpl().countUsers());
-		
-		List<Map<String, Object>> list = new UserServiceImpl().getUsersByMatchingAllProperty(new HashMap<String, Object>());
-		for(Map<String, Object> map : list)
-		{
-			for(Entry<String, Object> entry : map.entrySet())
-			{
-				System.out.println(entry.getKey() + "->" + entry.getValue());
-			}
-			System.out.println("---------------");
-		}
-		
-		System.out.println("****************************");
-		
-		userProperties.remove("firstName");
-		list = new UserServiceImpl().getUsersByMatchingAnyProperty(userProperties);
-		for(Map<String, Object> map : list)
-		{
-			for(Entry<String, Object> entry : map.entrySet())
-			{
-				System.out.println(entry.getKey() + "->" + entry.getValue());
-			}
-			System.out.println("---------------");
-		}
-	}
 }

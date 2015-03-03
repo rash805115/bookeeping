@@ -5,8 +5,8 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.index.ReadableIndex;
 
-import database.NodeLabels;
 import database.connection.singleton.Neo4JRestConnection;
+import database.neo4j.NodeLabels;
 import database.service.AutoIncrementService;
 
 public class AutoIncrementServiceImpl implements AutoIncrementService

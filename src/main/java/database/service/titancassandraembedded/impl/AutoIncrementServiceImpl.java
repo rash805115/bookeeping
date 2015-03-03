@@ -6,9 +6,9 @@ import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.TitanTransaction;
 import com.tinkerpop.blueprints.Vertex;
 
-import database.NodeLabels;
 import database.connection.singleton.TitanCassandraEmbeddedConnection;
 import database.service.AutoIncrementService;
+import database.titan.NodeLabels;
 
 public class AutoIncrementServiceImpl implements AutoIncrementService
 {

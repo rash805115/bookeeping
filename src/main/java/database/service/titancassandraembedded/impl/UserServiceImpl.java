@@ -9,9 +9,9 @@ import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.TitanTransaction;
 import com.tinkerpop.blueprints.Vertex;
 
-import database.NodeLabels;
 import database.connection.singleton.TitanCassandraEmbeddedConnection;
 import database.service.UserService;
+import database.titan.NodeLabels;
 import exception.DuplicateUser;
 import exception.UserNotFound;
 

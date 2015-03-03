@@ -59,11 +59,7 @@ public class Neo4JEmbeddedConnection
 	
 	public Iterator<Map<String, Object>> runCypherQuery(String cypherQuery, Map<String,Object> queryParameters)
 	{
-		try(Transaction transaction = this.graphDatabaseService.beginTx())
-		{
-			ExecutionResult executionResult = this.executionEngine.execute(cypherQuery, queryParameters);
-			transaction.success();
-			return executionResult.iterator();
-		}
+		ExecutionResult executionResult = this.executionEngine.execute(cypherQuery, queryParameters);
+		return executionResult.iterator();
 	}
 }

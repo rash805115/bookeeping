@@ -1,5 +1,10 @@
 package database.connection.singleton;
 
+import java.util.Iterator;
+import java.util.Map;
+
+import org.neo4j.cypher.javacompat.ExecutionEngine;
+import org.neo4j.cypher.javacompat.ExecutionResult;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
@@ -12,6 +17,7 @@ public class Neo4JEmbeddedConnection
 {
 	private static Neo4JEmbeddedConnection neo4jEmbeddedConnection;
 	private GraphDatabaseService graphDatabaseService;
+	private ExecutionEngine executionEngine;
 	
 	private Neo4JEmbeddedConnection()
 	{
@@ -19,6 +25,7 @@ public class Neo4JEmbeddedConnection
 		String databaseLocation = databaseConnectionProperty.getProperty("Neo4JEmbeddedDatabaseLocation");
 		
 		this.graphDatabaseService = new GraphDatabaseFactory().newEmbeddedDatabase(databaseLocation);
+		this.executionEngine = new ExecutionEngine(this.graphDatabaseService);
 		this.setupGraph();
 	}
 	
@@ -48,5 +55,15 @@ public class Neo4JEmbeddedConnection
 	public GraphDatabaseService getGraphDatabaseServiceObject()
 	{
 		return this.graphDatabaseService;
+	}
+	
+	public Iterator<Map<String, Object>> runCypherQuery(String cypherQuery, Map<String,Object> queryParameters)
+	{
+		try(Transaction transaction = this.graphDatabaseService.beginTx())
+		{
+			ExecutionResult executionResult = this.executionEngine.execute(cypherQuery, queryParameters);
+			transaction.success();
+			return executionResult.iterator();
+		}
 	}
 }

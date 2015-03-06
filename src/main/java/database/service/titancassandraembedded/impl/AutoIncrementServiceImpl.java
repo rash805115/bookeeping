@@ -2,6 +2,8 @@ package database.service.titancassandraembedded.impl;
 
 import java.util.Iterator;
 
+import utilities.AlphaNumericOperation;
+
 import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.TitanTransaction;
 import com.tinkerpop.blueprints.Vertex;
@@ -20,13 +22,13 @@ public class AutoIncrementServiceImpl implements AutoIncrementService
 	}
 	
 	@Override
-	public int getNextAutoIncrement()
+	public String getNextAutoIncrement()
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
 		
 		try
 		{
-			Iterator<Vertex> iterator = this.titanGraph.getVertices("nodeId", 0).iterator();
+			Iterator<Vertex> iterator = this.titanGraph.getVertices("nodeId", "0").iterator();
 			Vertex autoIncrement = null;
 			while(iterator.hasNext())
 			{
@@ -36,16 +38,16 @@ public class AutoIncrementServiceImpl implements AutoIncrementService
 			if(autoIncrement == null)
 			{
 				Vertex vertex = this.titanGraph.addVertexWithLabel(NodeLabels.AutoIncrement.name());
-				vertex.setProperty("nodeId", 0);
-				vertex.setProperty("next", 2);
+				vertex.setProperty("nodeId", "0");
+				vertex.setProperty("next", "2");
 				
 				titanTransaction.commit();
-				return 1;
+				return "1";
 			}
 			else
 			{
-				int nextIncrement = autoIncrement.getProperty("next");
-				autoIncrement.setProperty("next", nextIncrement + 1);
+				String nextIncrement = autoIncrement.getProperty("next");
+				autoIncrement.setProperty("next", AlphaNumericOperation.add(nextIncrement, 1));
 				
 				titanTransaction.commit();
 				return nextIncrement;

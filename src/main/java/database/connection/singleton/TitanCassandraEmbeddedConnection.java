@@ -47,7 +47,7 @@ public class TitanCassandraEmbeddedConnection
 			
 			if(! this.titanGraph.containsPropertyKey("nodeId"))
 			{
-				PropertyKey nodeIdPropertyKey = titanManagement.makePropertyKey("nodeId").dataType(Integer.class).make();
+				PropertyKey nodeIdPropertyKey = titanManagement.makePropertyKey("nodeId").dataType(String.class).make();
 				titanManagement.buildIndex("nodeIdIndex", Vertex.class).addKey(nodeIdPropertyKey).unique().buildCompositeIndex();
 			}
 			

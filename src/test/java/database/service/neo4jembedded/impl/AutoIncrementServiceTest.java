@@ -6,6 +6,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import utilities.AlphaNumericOperation;
 import database.service.AutoIncrementService;
 
 public class AutoIncrementServiceTest
@@ -27,8 +28,8 @@ public class AutoIncrementServiceTest
 	@Test
 	public void testGetNextAutoIncrement()
 	{
-		long nextAutoIncrement1 = this.autoIncrementService.getNextAutoIncrement();
-		long nextAutoIncrement2 = this.autoIncrementService.getNextAutoIncrement();
-		assertEquals(nextAutoIncrement1 + 1, nextAutoIncrement2);
+		String nextAutoIncrement1 = this.autoIncrementService.getNextAutoIncrement();
+		String nextAutoIncrement2 = this.autoIncrementService.getNextAutoIncrement();
+		assertEquals(AlphaNumericOperation.add(nextAutoIncrement1, 1), nextAutoIncrement2);
 	}
 }

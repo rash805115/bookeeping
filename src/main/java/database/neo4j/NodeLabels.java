@@ -4,5 +4,5 @@ import org.neo4j.graphdb.Label;
 
 public enum NodeLabels implements Label
 {
-	AutoIncrement, User
+	AutoIncrement, User, Filesystem
 }

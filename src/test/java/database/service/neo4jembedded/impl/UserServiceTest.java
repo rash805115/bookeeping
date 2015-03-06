@@ -48,7 +48,7 @@ public class UserServiceTest
 			
 			assertEquals(oldUserCount + 1, newUserCount);
 		}
-		catch (Exception exception)
+		catch(Exception exception)
 		{
 			assertFalse(exception.getMessage(), true);
 		}
@@ -72,7 +72,7 @@ public class UserServiceTest
 			
 			assertEquals(oldUserCount + 1, newUserCount);
 		}
-		catch (Exception exception)
+		catch(Exception exception)
 		{
 			assertFalse(exception.getMessage(), true);
 		}
@@ -96,7 +96,7 @@ public class UserServiceTest
 			
 			assertEquals(oldUserCount - 1, newUserCount);
 		}
-		catch (Exception exception)
+		catch(Exception exception)
 		{
 			assertFalse(exception.getMessage(), true);
 		}
@@ -118,7 +118,7 @@ public class UserServiceTest
 			this.userService.removeUser(userId);
 			assertEquals(userProperties.size() + 2, map.size());
 		}
-		catch (Exception exception)
+		catch(Exception exception)
 		{
 			assertFalse(exception.getMessage(), true);
 		}
@@ -164,7 +164,7 @@ public class UserServiceTest
 			
 			assertEquals(matchResults1.size() + 1, matchResults2.size());
 		}
-		catch (Exception exception)
+		catch(Exception exception)
 		{
 			assertFalse(exception.getMessage(), true);
 		}
@@ -210,7 +210,7 @@ public class UserServiceTest
 			
 			assertEquals(matchResults1.size(), matchResults2.size());
 		}
-		catch (Exception exception)
+		catch(Exception exception)
 		{
 			assertFalse(exception.getMessage(), true);
 		}

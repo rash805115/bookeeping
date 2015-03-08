@@ -50,7 +50,7 @@ public class FilesystemServiceImpl implements FilesystemService
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
 			Node user = this.getUser(userId);
-			Iterable<Relationship> iterable = user.getRelationships(RelationshipLabels.owns_belongsTo);
+			Iterable<Relationship> iterable = user.getRelationships(RelationshipLabels.has);
 			for(Relationship relationship : iterable)
 			{
 				Node filesystem = relationship.getEndNode();
@@ -72,7 +72,7 @@ public class FilesystemServiceImpl implements FilesystemService
 				node.setProperty(filesystemPropertiesEntry.getKey(), filesystemPropertiesEntry.getValue());
 			}
 			
-			user.createRelationshipTo(node, RelationshipLabels.owns_belongsTo);
+			user.createRelationshipTo(node, RelationshipLabels.has);
 			
 			transaction.success();
 		}
@@ -84,7 +84,7 @@ public class FilesystemServiceImpl implements FilesystemService
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
 			Node user = this.getUser(userId);
-			Iterable<Relationship> iterable = user.getRelationships(RelationshipLabels.owns_belongsTo);
+			Iterable<Relationship> iterable = user.getRelationships(RelationshipLabels.has);
 			for(Relationship relationship : iterable)
 			{
 				Node filesystem = relationship.getEndNode();
@@ -110,7 +110,7 @@ public class FilesystemServiceImpl implements FilesystemService
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
 			Node user = this.getUser(userId);
-			Iterable<Relationship> iterable = user.getRelationships(RelationshipLabels.owns_belongsTo);
+			Iterable<Relationship> iterable = user.getRelationships(RelationshipLabels.has);
 			for(Relationship relationship : iterable)
 			{
 				Node filesystem = relationship.getEndNode();

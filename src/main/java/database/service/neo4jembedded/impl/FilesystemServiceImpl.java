@@ -6,9 +6,7 @@ import java.util.Map.Entry;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.index.ReadableIndex;
 
 import database.connection.singleton.Neo4JEmbeddedConnection;
 import database.neo4j.NodeLabels;
@@ -29,79 +27,34 @@ public class FilesystemServiceImpl implements FilesystemService
 		this.graphDatabaseService = this.neo4jEmbeddedConnection.getGraphDatabaseServiceObject();
 	}
 	
-	private Node getUser(String userId) throws UserNotFound
-	{
-		ReadableIndex<Node> readableIndex = this.graphDatabaseService.index().getNodeAutoIndexer().getAutoIndex();
-		Node user = readableIndex.get("userId", userId).getSingle();
-		
-		if(user == null)
-		{
-			throw new UserNotFound("ERROR: User not found! - \"" + userId + "\"");
-		}
-		else
-		{
-			return user;
-		}
-	}
-	
 	@Override
 	public void createNewFilesystem(String filesystemId, String userId, Map<String, Object> filesystemProperties) throws UserNotFound, DuplicateFilesystem
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			Node user = this.getUser(userId);
-			Iterable<Relationship> iterable = user.getRelationships(RelationshipLabels.has);
-			for(Relationship relationship : iterable)
+			Node user = null;
+			try
 			{
-				Node filesystem = relationship.getEndNode();
-				String retrievedFilesystemId = (String) filesystem.getProperty("filesystemId");
+				CommonCode commonCode = new CommonCode();
+				user = commonCode.getUser(userId);
+				commonCode.getFilesystem(userId, filesystemId);
+				throw new DuplicateFilesystem("ERROR: Filesystem already present! - \"" + filesystemId + "\"");
+			}
+			catch(FilesystemNotFound filesystemNotFound)
+			{
+				Node node = this.graphDatabaseService.createNode(NodeLabels.Filesystem);
+				node.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
+				node.setProperty("filesystemId", filesystemId);
+				node.setProperty("version", 0);
 				
-				if(retrievedFilesystemId.equals(filesystemId))
+				for(Entry<String, Object> filesystemPropertiesEntry : filesystemProperties.entrySet())
 				{
-					transaction.success();
-					throw new DuplicateFilesystem("ERROR: Filesystem already present! - \"" + filesystemId + "\"");
+					node.setProperty(filesystemPropertiesEntry.getKey(), filesystemPropertiesEntry.getValue());
 				}
-			}
-			
-			Node node = this.graphDatabaseService.createNode(NodeLabels.Filesystem);
-			node.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
-			node.setProperty("filesystemId", filesystemId);
-			node.setProperty("version", 0);
-			
-			for(Entry<String, Object> filesystemPropertiesEntry : filesystemProperties.entrySet())
-			{
-				node.setProperty(filesystemPropertiesEntry.getKey(), filesystemPropertiesEntry.getValue());
-			}
-			
-			user.createRelationshipTo(node, RelationshipLabels.has);
-			
-			transaction.success();
-		}
-	}
-
-	@Override
-	public void removeFilesystem(String userId, String filesystemId) throws UserNotFound, FilesystemNotFound
-	{
-		try(Transaction transaction = this.graphDatabaseService.beginTx())
-		{
-			Node user = this.getUser(userId);
-			Iterable<Relationship> iterable = user.getRelationships(RelationshipLabels.has);
-			for(Relationship relationship : iterable)
-			{
-				Node filesystem = relationship.getEndNode();
-				String retrievedFilesystemId = (String) filesystem.getProperty("filesystemId");
 				
-				if(retrievedFilesystemId.equals(filesystemId))
-				{
-					relationship.delete();
-					filesystem.delete();
-					transaction.success();
-					return;
-				}
+				user.createRelationshipTo(node, RelationshipLabels.has);
+				transaction.success();
 			}
-			
-			transaction.success();
-			throw new FilesystemNotFound("ERROR: Filesystem not found! - \"" + filesystemId + "\"");
 		}
 	}
 
@@ -110,30 +63,17 @@ public class FilesystemServiceImpl implements FilesystemService
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			Node user = this.getUser(userId);
-			Iterable<Relationship> iterable = user.getRelationships(RelationshipLabels.has);
-			for(Relationship relationship : iterable)
+			Node filesystem = new CommonCode().getFilesystem(userId, filesystemId);
+			Map<String, Object> filesystemProperties = new HashMap<String, Object>();
+			
+			Iterable<String> keys = filesystem.getPropertyKeys();
+			for(String key : keys)
 			{
-				Node filesystem = relationship.getEndNode();
-				String retrievedFilesystemId = (String) filesystem.getProperty("filesystemId");
-				
-				if(retrievedFilesystemId.equals(filesystemId))
-				{
-					Map<String, Object> filesystemProperties = new HashMap<String, Object>();
-					
-					Iterable<String> keys = filesystem.getPropertyKeys();
-					for(String key : keys)
-					{
-						filesystemProperties.put(key, filesystem.getProperty(key));
-					}
-					
-					transaction.success();
-					return filesystemProperties;
-				}
+				filesystemProperties.put(key, filesystem.getProperty(key));
 			}
 			
 			transaction.success();
-			throw new FilesystemNotFound("ERROR: Filesystem not found! - \"" + filesystemId + "\"");
+			return filesystemProperties;
 		}
 	}
 }

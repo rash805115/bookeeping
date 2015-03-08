@@ -10,7 +10,6 @@ import exception.UserNotFound;
 
 public interface FileService
 {
-	public void createNewFile(String fileId, String directoryId, String filesystemId, String userId, Map<String, Object> fileProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateFile;
-	
-	public Map<String, Object> getFile(String userId, String filesystemId, String directoryId, String fileId) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound;
+	public void createNewFile(String filePath, String fileName, String filesystemId, String userId, Map<String, Object> fileProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateFile;
+	public Map<String, Object> getFile(String userId, String filesystemId, String filePath, String fileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound;
 }

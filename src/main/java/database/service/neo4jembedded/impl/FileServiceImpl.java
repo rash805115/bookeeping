@@ -1,13 +1,15 @@
 package database.service.neo4jembedded.impl;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.index.ReadableIndex;
+import org.neo4j.graphdb.Transaction;
 
 import database.connection.singleton.Neo4JEmbeddedConnection;
+import database.neo4j.NodeLabels;
 import database.neo4j.RelationshipLabels;
 import database.service.FileService;
 import exception.DirectoryNotFound;
@@ -26,58 +28,65 @@ public class FileServiceImpl implements FileService
 		this.neo4jEmbeddedConnection = Neo4JEmbeddedConnection.getInstance();
 		this.graphDatabaseService = this.neo4jEmbeddedConnection.getGraphDatabaseServiceObject();
 	}
-	
-	private Node getUser(String userId) throws UserNotFound
+
+	@Override
+	public void createNewFile(String filePath, String fileName, String filesystemId, String userId, Map<String, Object> fileProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateFile
 	{
-		ReadableIndex<Node> readableIndex = this.graphDatabaseService.index().getNodeAutoIndexer().getAutoIndex();
-		Node user = readableIndex.get("userId", userId).getSingle();
-		
-		if(user == null)
+		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			throw new UserNotFound("ERROR: User not found! - \"" + userId + "\"");
-		}
-		else
-		{
-			return user;
-		}
-	}
-	
-	private Node getFilesystem(String userId, String filesystemId) throws FilesystemNotFound, UserNotFound
-	{
-		Node user  = this.getUser(userId);
-		Iterable<Relationship> iterable = user.getRelationships(RelationshipLabels.has);
-		for(Relationship relationship : iterable)
-		{
-			Node filesystem = relationship.getEndNode();
-			String retrievedFilesystemId = (String) filesystem.getProperty("filesystemId");
-			
-			if(retrievedFilesystemId.equals(filesystemId))
+			Node parentDirectory = null;
+			try
 			{
-				return filesystem;
+				CommonCode commonCode = new CommonCode();
+				if(filePath.equals(""))
+				{
+					parentDirectory = commonCode.getRootDirectory(userId, filesystemId);
+				}
+				else
+				{
+					String directoryName = filePath.substring(filePath.lastIndexOf("/") + 1, filePath.length());
+					String directoryPath = filePath.substring(0, filePath.lastIndexOf("/" + directoryName));
+					parentDirectory = commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName);
+				}
+				
+				commonCode.getFile(userId, filesystemId, filePath, fileName);
+				throw new DuplicateFile("ERROR: File already present! - \"" + filePath + "/" + fileName + "\"");
+			}
+			catch(FileNotFound fileNotFound)
+			{
+				Node node = this.graphDatabaseService.createNode(NodeLabels.Directory);
+				node.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
+				node.setProperty("filePath", filePath);
+				node.setProperty("fileName", fileName);
+				node.setProperty("version", 0);
+				
+				for(Entry<String, Object> filePropertiesEntry : fileProperties.entrySet())
+				{
+					node.setProperty(filePropertiesEntry.getKey(), filePropertiesEntry.getValue());
+				}
+				
+				parentDirectory.createRelationshipTo(node, RelationshipLabels.has);
+				transaction.success();
 			}
 		}
-		
-		throw new FilesystemNotFound("ERROR: Filesystem not found! - \"" + filesystemId + "\"");
-	}
-	
-	private Node getRootDirectory(String userId, String filesystemId) throws FilesystemNotFound, UserNotFound
-	{
-		Node filesystem = this.getFilesystem(userId, filesystemId);
-		return filesystem.getRelationships(RelationshipLabels.has).iterator().next().getEndNode();
-	}
-	
-	@Override
-	public void createNewFile(String fileId, String directoryId, String filesystemId, String userId, Map<String, Object> fileProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateFile
-	{
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
-	public Map<String, Object> getFile(String userId, String filesystemId, String directoryId, String fileId) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound
+	public Map<String, Object> getFile(String userId, String filesystemId, String filePath, String fileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound
 	{
-		// TODO Auto-generated method stub
-		return null;
+		try(Transaction transaction = this.graphDatabaseService.beginTx())
+		{
+			Node file = new CommonCode().getFile(userId, filesystemId, filePath, fileName);
+			Map<String, Object> fileProperties = new HashMap<String, Object>();
+			
+			Iterable<String> keys = file.getPropertyKeys();
+			for(String key : keys)
+			{
+				fileProperties.put(key, file.getProperty(key));
+			}
+			
+			transaction.success();
+			return fileProperties;
+		}
 	}
-
 }

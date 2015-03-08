@@ -12,6 +12,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import database.service.UserService;
+import exception.DuplicateUser;
 import exception.UserNotFound;
 
 public class UserServiceTest
@@ -31,6 +32,24 @@ public class UserServiceTest
 	}
 	
 	@Test
+	public void testUserServiceImpl() throws UserNotFound, DuplicateUser
+	{
+		String userId = "testUser";
+		Map<String, Object> userProperties = new HashMap<String, Object>();
+		userProperties.put("firstName", "Test");
+		userProperties.put("lastName", "User");
+		userProperties.put("email", "testuser@test.com");
+		
+		long oldUserCount = this.userService.countUsers();
+		this.userService.createNewUser(userId, userProperties);
+		long newUserCount = this.userService.countUsers();
+		assertEquals(oldUserCount + 1, newUserCount);
+		
+		Map<String, Object> retrievedUserProperties = this.userService.getUser(userId);
+		assertEquals(userProperties.size() + 2, retrievedUserProperties.size());
+	}
+	
+	/*@Test
 	public void testCreateNewUser() throws UserNotFound
 	{
 		String userId = "testUser";
@@ -214,5 +233,5 @@ public class UserServiceTest
 		{
 			assertFalse(exception.getMessage(), true);
 		}
-	}
+	}*/
 }

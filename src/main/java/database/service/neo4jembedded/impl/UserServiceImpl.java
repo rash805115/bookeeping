@@ -10,7 +10,6 @@ import java.util.Map.Entry;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.index.ReadableIndex;
 
 import database.connection.singleton.Neo4JEmbeddedConnection;
 import database.neo4j.NodeLabels;
@@ -34,18 +33,14 @@ public class UserServiceImpl implements UserService
 	@Override
 	public void createNewUser(String userId, Map<String, Object> userProperties) throws DuplicateUser
 	{
-		Node user = null;
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			ReadableIndex<Node> readableIndex = this.graphDatabaseService.index().getNodeAutoIndexer().getAutoIndex();
-			user = readableIndex.get("userId", userId).getSingle();
-			
-			if(user != null)
+			try
 			{
-				transaction.success();
+				new CommonCode().getUser(userId);
 				throw new DuplicateUser("ERROR: User already present! - \"" + userId + "\"");
 			}
-			else
+			catch(UserNotFound userNotFound)
 			{
 				Node node = this.graphDatabaseService.createNode(NodeLabels.User);
 				node.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
@@ -66,72 +61,39 @@ public class UserServiceImpl implements UserService
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			Iterator<Map<String, Object>> iterator = this.neo4jEmbeddedConnection.runCypherQuery(new CypherQueryBuilder(QueryType.MATCH_COUNT, null).buildQuery(NodeLabels.User, new HashMap<String, Object>(), true), new HashMap<String, Object>());
+			Iterator<Map<String, Object>> iterator = this.neo4jEmbeddedConnection.runCypherQuery(new CypherQueryBuilder(QueryType.MATCH_COUNT).buildQuery(NodeLabels.User, new HashMap<String, Object>(), true), new HashMap<String, Object>());
 			long count = (long) iterator.next().get("count");
 			transaction.success();
 			return count;
-		}
-	}
-
-	@Override
-	public void removeUser(String userId) throws UserNotFound
-	{
-		Node user = null;
-		try(Transaction transaction = this.graphDatabaseService.beginTx())
-		{
-			ReadableIndex<Node> readableIndex = this.graphDatabaseService.index().getNodeAutoIndexer().getAutoIndex();
-			user = readableIndex.get("userId", userId).getSingle();
-			
-			if(user == null)
-			{
-				transaction.success();
-				throw new UserNotFound("ERROR: User not found! - \"" + userId + "\"");
-			}
-			else
-			{
-				user.delete();
-				transaction.success();
-			}
 		}
 	}
 	
 	@Override
 	public Map<String, Object> getUser(String userId) throws UserNotFound
 	{
-		Node user = null;
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			ReadableIndex<Node> readableIndex = this.graphDatabaseService.index().getNodeAutoIndexer().getAutoIndex();
-			user = readableIndex.get("userId", userId).getSingle();
+			Node user = new CommonCode().getUser(userId);
+			Map<String, Object> userProperties = new HashMap<String, Object>();
 			
-			if(user == null)
+			Iterable<String> iterable = user.getPropertyKeys();
+			for(String key : iterable)
 			{
-				transaction.success();
-				throw new UserNotFound("ERROR: User not found! - \"" + userId + "\"");
+				userProperties.put(key, user.getProperty(key));
 			}
-			else
-			{
-				Map<String, Object> userProperties = new HashMap<String, Object>();
-				
-				Iterable<String> iterable = user.getPropertyKeys();
-				for(String key : iterable)
-				{
-					userProperties.put(key, user.getProperty(key));
-				}
-				
-				transaction.success();
-				return userProperties;
-			}
+			
+			transaction.success();
+			return userProperties;
 		}
 	}
 
 	@Override
-	public List<Map<String, Object>> getUsersByMatchingAllProperty(Map<String, Object> userProperties) throws UserNotFound
+	public List<Map<String, Object>> getUsersByMatchingAllProperty(Map<String, Object> userProperties)
 	{
 		List<Map<String, Object>> list = new ArrayList<Map<String, Object>>();
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			Iterator<Map<String, Object>> iterator = this.neo4jEmbeddedConnection.runCypherQuery(new CypherQueryBuilder(QueryType.MATCH_NODE, null)
+			Iterator<Map<String, Object>> iterator = this.neo4jEmbeddedConnection.runCypherQuery(new CypherQueryBuilder(QueryType.MATCH_NODE)
 														.buildQuery(NodeLabels.User, userProperties, true), userProperties);
 			while(iterator.hasNext())
 			{
@@ -153,12 +115,12 @@ public class UserServiceImpl implements UserService
 	}
 
 	@Override
-	public List<Map<String, Object>> getUsersByMatchingAnyProperty(Map<String, Object> userProperties) throws UserNotFound
+	public List<Map<String, Object>> getUsersByMatchingAnyProperty(Map<String, Object> userProperties)
 	{
 		List<Map<String, Object>> list = new ArrayList<Map<String, Object>>();
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			Iterator<Map<String, Object>> iterator = this.neo4jEmbeddedConnection.runCypherQuery(new CypherQueryBuilder(QueryType.MATCH_NODE, null)
+			Iterator<Map<String, Object>> iterator = this.neo4jEmbeddedConnection.runCypherQuery(new CypherQueryBuilder(QueryType.MATCH_NODE)
 														.buildQuery(NodeLabels.User, userProperties, false), userProperties);
 			while(iterator.hasNext())
 			{

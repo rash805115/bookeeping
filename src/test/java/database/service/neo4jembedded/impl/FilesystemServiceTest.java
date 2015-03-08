@@ -14,6 +14,10 @@ import org.junit.Test;
 
 import database.service.FilesystemService;
 import database.service.UserService;
+import exception.DuplicateFilesystem;
+import exception.DuplicateUser;
+import exception.FilesystemNotFound;
+import exception.UserNotFound;
 
 public class FilesystemServiceTest
 {
@@ -35,6 +39,27 @@ public class FilesystemServiceTest
 	}
 	
 	@Test
+	public void testFilesystemServiceImpl() throws DuplicateUser, UserNotFound, DuplicateFilesystem, FilesystemNotFound
+	{
+		String userId = "testUser";
+		Map<String, Object> userProperties = new HashMap<String, Object>();
+		userProperties.put("firstName", "Test");
+		userProperties.put("lastName", "User");
+		userProperties.put("email", "testuser@test.com");
+		
+		String filesystemId = "testFilesystem";
+		Map<String, Object> filesystemProperties = new HashMap<String, Object>();
+		filesystemProperties.put("sourceLocation", "testUser:/home/testUser/bookeeping");
+		filesystemProperties.put("backupLocations", "[http://googledrive.com/testUser, http://dropbox.com/testUser]");
+		filesystemProperties.put("dateCreated", new Date().toString());
+		
+		this.userService.createNewUser(userId, userProperties);
+		this.filesystemService.createNewFilesystem(filesystemId, userId, filesystemProperties);
+		Map<String, Object> retrievedFilesystemProperties = this.filesystemService.getFilesystem(userId, filesystemId);
+		assertEquals(filesystemProperties.size() + 3, retrievedFilesystemProperties.size());
+	}
+	
+	/*@Test
 	public void testCreateNewFilesystem()
 	{
 		String userId = "testUser";
@@ -182,5 +207,5 @@ public class FilesystemServiceTest
 		{
 			assertFalse(exception.getMessage(), true);
 		}
-	}
+	}*/
 }

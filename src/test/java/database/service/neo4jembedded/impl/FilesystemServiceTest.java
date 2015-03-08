@@ -165,7 +165,7 @@ public class FilesystemServiceTest
 			Map<String, Object> retrievedFilesystem = this.filesystemService.getFilesystem(userId, filesystemId);
 			if(retrievedFilesystem.size() > 0)
 			{
-				assertEquals(filesystemProperties.size() + 2, retrievedFilesystem.size());
+				assertEquals(filesystemProperties.size() + 3, retrievedFilesystem.size());
 			}
 		}
 		catch(Exception exception)

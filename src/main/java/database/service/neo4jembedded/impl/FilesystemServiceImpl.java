@@ -66,6 +66,7 @@ public class FilesystemServiceImpl implements FilesystemService
 			Node node = this.graphDatabaseService.createNode(NodeLabels.Filesystem);
 			node.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
 			node.setProperty("filesystemId", filesystemId);
+			node.setProperty("version", 0);
 			
 			for(Entry<String, Object> filesystemPropertiesEntry : filesystemProperties.entrySet())
 			{

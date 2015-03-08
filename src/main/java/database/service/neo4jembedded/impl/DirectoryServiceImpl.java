@@ -1,6 +1,7 @@
 package database.service.neo4jembedded.impl;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -13,6 +14,8 @@ import org.neo4j.graphdb.index.ReadableIndex;
 import database.connection.singleton.Neo4JEmbeddedConnection;
 import database.neo4j.NodeLabels;
 import database.neo4j.RelationshipLabels;
+import database.neo4j.querybuilder.CypherQueryBuilder;
+import database.neo4j.querybuilder.QueryType;
 import database.service.DirectoryService;
 import exception.DirectoryNotFound;
 import exception.DuplicateDirectory;
@@ -69,8 +72,27 @@ public class DirectoryServiceImpl implements DirectoryService
 		return filesystem.getRelationships(RelationshipLabels.has).iterator().next().getEndNode();
 	}
 	
+	private Node getDirectory(String userId, String filesystemId, String directoryPath, String directoryName) throws FilesystemNotFound, UserNotFound
+	{
+		Map<String, Object> directoryProperties = new HashMap<String, Object>();
+		directoryProperties.put("directoryPath", directoryPath);
+		directoryProperties.put("directoryName", directoryName);
+		
+		String query = "match (user:User), (filesystem:Filesystem), (node%s), (user)-[:has]->(filesystem) where filesystem.filesystemId=1 and directory.directoryPath="/" and directory.directoryName="abc1" return count(user), count(filesystem), count(directory);"
+		Iterator<Map<String, Object>> iterator = this.neo4jEmbeddedConnection.runCypherQuery(new CypherQueryBuilder(QueryType.MATCH_NODE)
+													.buildQuery(NodeLabels.Directory, directoryProperties, true), directoryProperties);
+		Node directory = null;
+		while(iterator.hasNext())
+		{
+			directory = (Node) iterator.next().get("node");
+		}
+		
+		return directory;
+		//match(user:User {userId: userId}) -[:has]- (filesystem: Filesystem {filesystemId: filesystemId}) -[]-
+	}
+	
 	@Override
-	public void createNewDirectory(String directoryId, String filesystemId, String userId, Map<String, Object> directoryProperties) throws UserNotFound, FilesystemNotFound, DuplicateDirectory
+	public void createNewDirectory(String directoryPath, String directoryName, String filesystemId, String userId, Map<String, Object> directoryProperties) throws UserNotFound, FilesystemNotFound, DuplicateDirectory
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
@@ -82,12 +104,13 @@ public class DirectoryServiceImpl implements DirectoryService
 				Node node = relationship.getEndNode();
 				if(node.hasLabel(NodeLabels.Directory))
 				{
-					String retrievedDirectoryId = (String) node.getProperty("directoryId");
+					String retrievedDirectoryPath = (String) node.getProperty("directoryPath");
+					String retrievedDirectoryName = (String) node.getProperty("directoryName");
 					
-					if(retrievedDirectoryId.equals(directoryId))
+					if((retrievedDirectoryPath + retrievedDirectoryName).equals(directoryPath + directoryName))
 					{
 						transaction.success();
-						throw new DuplicateDirectory("ERROR: Directory already present! - \"" + directoryId + "\"");
+						throw new DuplicateDirectory("ERROR: Directory already present! - \"" + directoryPath + "\"");
 					}
 				}
 			}

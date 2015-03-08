@@ -8,24 +8,31 @@ public class CypherQueryBuilder
 {
 	private String query;
 	
-	public CypherQueryBuilder(QueryType queryType)
+	public CypherQueryBuilder(QueryType queryType, String override)
 	{
-		switch(queryType)
+		if(override != null)
 		{
-			case MATCH_NODE:
+			this.query = override;
+		}
+		else
+		{
+			switch(queryType)
 			{
-				this.query = "match (node%s) %s return node";
-				break;
-			}
-			case MATCH_COUNT:
-			{
-				this.query = "match (node%s) %s return count(node) as count";
-				break;
-			}
-			default:
-			{
-				this.query = null;
-				break;
+				case MATCH_NODE:
+				{
+					this.query = "match (node%s) %s return node";
+					break;
+				}
+				case MATCH_COUNT:
+				{
+					this.query = "match (node%s) %s return count(node) as count";
+					break;
+				}
+				default:
+				{
+					this.query = null;
+					break;
+				}
 			}
 		}
 	}

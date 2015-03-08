@@ -66,7 +66,7 @@ public class UserServiceImpl implements UserService
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			Iterator<Map<String, Object>> iterator = this.neo4jEmbeddedConnection.runCypherQuery(new CypherQueryBuilder(QueryType.MATCH_COUNT).buildQuery(NodeLabels.User, new HashMap<String, Object>(), true), new HashMap<String, Object>());
+			Iterator<Map<String, Object>> iterator = this.neo4jEmbeddedConnection.runCypherQuery(new CypherQueryBuilder(QueryType.MATCH_COUNT, null).buildQuery(NodeLabels.User, new HashMap<String, Object>(), true), new HashMap<String, Object>());
 			long count = (long) iterator.next().get("count");
 			transaction.success();
 			return count;
@@ -131,7 +131,7 @@ public class UserServiceImpl implements UserService
 		List<Map<String, Object>> list = new ArrayList<Map<String, Object>>();
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			Iterator<Map<String, Object>> iterator = this.neo4jEmbeddedConnection.runCypherQuery(new CypherQueryBuilder(QueryType.MATCH_NODE)
+			Iterator<Map<String, Object>> iterator = this.neo4jEmbeddedConnection.runCypherQuery(new CypherQueryBuilder(QueryType.MATCH_NODE, null)
 														.buildQuery(NodeLabels.User, userProperties, true), userProperties);
 			while(iterator.hasNext())
 			{
@@ -158,7 +158,7 @@ public class UserServiceImpl implements UserService
 		List<Map<String, Object>> list = new ArrayList<Map<String, Object>>();
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			Iterator<Map<String, Object>> iterator = this.neo4jEmbeddedConnection.runCypherQuery(new CypherQueryBuilder(QueryType.MATCH_NODE)
+			Iterator<Map<String, Object>> iterator = this.neo4jEmbeddedConnection.runCypherQuery(new CypherQueryBuilder(QueryType.MATCH_NODE, null)
 														.buildQuery(NodeLabels.User, userProperties, false), userProperties);
 			while(iterator.hasNext())
 			{

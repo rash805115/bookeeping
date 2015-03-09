@@ -1,7 +1,5 @@
 package database.service.neo4jembedded.impl;
 
-import java.util.Iterator;
-
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -64,7 +62,7 @@ public class CommonCode
 	public Node getRootDirectory(String userId, String filesystemId) throws FilesystemNotFound, UserNotFound
 	{
 		Node filesystem = this.getFilesystem(userId, filesystemId);
-		return filesystem.getRelationships(Direction.OUTGOING, RelationshipLabels.has).iterator().next().getEndNode();
+		return filesystem.getSingleRelationship(RelationshipLabels.has, Direction.OUTGOING).getEndNode();
 	}
 	
 	public Node getDirectory(String userId, String filesystemId, String directoryPath, String directoryName) throws FilesystemNotFound, UserNotFound, DirectoryNotFound
@@ -104,7 +102,7 @@ public class CommonCode
 			parentDirectory = this.getDirectory(userId, filesystemId, directoryPath, directoryName);
 		}
 		
-		Iterable<Relationship> iterable = parentDirectory.getRelationships(RelationshipLabels.has);
+		Iterable<Relationship> iterable = parentDirectory.getRelationships(Direction.OUTGOING, RelationshipLabels.has);
 		for(Relationship relationship : iterable)
 		{
 			Node node = relationship.getEndNode();
@@ -150,12 +148,8 @@ public class CommonCode
 				}
 			}
 			
-			Iterator<Relationship> iterator = node.getRelationships(Direction.OUTGOING, RelationshipLabels.hasVersion).iterator();
-			if(iterator.hasNext())
-			{
-				node = iterator.next().getEndNode();
-			}
-			else
+			Relationship hasVersionRelationship = node.getSingleRelationship(RelationshipLabels.hasVersion, Direction.OUTGOING);
+			if(hasVersionRelationship == null)
 			{
 				if(version == -1)
 				{
@@ -165,6 +159,10 @@ public class CommonCode
 				{
 					node = null;
 				}
+			}
+			else
+			{
+				node = hasVersionRelationship.getEndNode();
 			}
 		}
 		while(node != null);

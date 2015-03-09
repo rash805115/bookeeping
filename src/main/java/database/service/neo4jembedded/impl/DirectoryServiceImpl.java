@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -91,6 +92,26 @@ public class DirectoryServiceImpl implements DirectoryService
 				relationship.setProperty(entry.getKey(), entry.getValue());
 			}
 			
+			transaction.success();
+		}
+	}
+	
+	@Override
+	public void deleteDirectoryTemporarily(String userId, String filesystemId, String directoryPath, String directoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound
+	{
+		try(Transaction transaction = this.graphDatabaseService.beginTx())
+		{
+			Node directory = new CommonCode().getDirectory(userId, filesystemId, directoryPath, directoryName);
+			Relationship hasRelationship = directory.getSingleRelationship(RelationshipLabels.has, Direction.INCOMING);
+			Node parentDirectory = hasRelationship.getStartNode();
+			
+			Relationship hadRelationship = parentDirectory.createRelationshipTo(directory, RelationshipLabels.had);
+			for(String key : hasRelationship.getPropertyKeys())
+			{
+				hadRelationship.setProperty(key, hasRelationship.getProperty(key));
+			}
+			
+			hasRelationship.delete();
 			transaction.success();
 		}
 	}

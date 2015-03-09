@@ -107,5 +107,7 @@ public class FileServiceTest
 		
 		assertEquals(fileProperties.size() + 4, retrievedFileV0Properties.size());
 		assertEquals(fileProperties.size() + 5, retrievedFileV1Properties.size());
+		
+		this.fileService.deleteFileTemporarily(userId, filesystemId, filePath, fileName);
 	}
 }

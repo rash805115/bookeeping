@@ -48,6 +48,7 @@ public class FileServiceImpl implements FileService
 				{
 					String directoryName = filePath.substring(filePath.lastIndexOf("/") + 1, filePath.length());
 					String directoryPath = filePath.substring(0, filePath.lastIndexOf("/" + directoryName));
+					directoryPath = directoryPath.length() == 0 ? "/" : directoryPath;
 					parentDirectory = commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName);
 				}
 				
@@ -74,12 +75,17 @@ public class FileServiceImpl implements FileService
 	}
 	
 	@Override
-	public void createNewVersion(String userId, String filesystemId, String filePath, String fileName, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
+	public void createNewVersion(String userId, String filesystemId, String filePath, String fileName, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
 			CommonCode commonCode = new CommonCode();
-			Node file = commonCode.getVersion("file", userId, filesystemId, filePath, fileName, -1);
+			Node file = null;
+			try
+			{
+				file = commonCode.getVersion("file", userId, filesystemId, filePath, fileName, -1);
+			}
+			catch (VersionNotFound e) {}
 			Node versionedFile = commonCode.copyNode(file);
 			
 			int fileLatestVersion = (int) file.getProperty("version");

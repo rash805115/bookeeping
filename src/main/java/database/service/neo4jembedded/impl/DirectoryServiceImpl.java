@@ -6,6 +6,7 @@ import java.util.Map.Entry;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 
 import database.connection.singleton.Neo4JEmbeddedConnection;
@@ -14,8 +15,10 @@ import database.neo4j.RelationshipLabels;
 import database.service.DirectoryService;
 import exception.DirectoryNotFound;
 import exception.DuplicateDirectory;
+import exception.FileNotFound;
 import exception.FilesystemNotFound;
 import exception.UserNotFound;
+import exception.VersionNotFound;
 
 public class DirectoryServiceImpl implements DirectoryService
 {
@@ -61,11 +64,48 @@ public class DirectoryServiceImpl implements DirectoryService
 	}
 	
 	@Override
-	public Map<String, Object> getDirectory(String userId, String filesystemId, String directoryPath, String directoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound
+	public void createNewVersion(String userId, String filesystemId, String directoryPath, String directoryName, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			Node directory = new CommonCode().getDirectory(userId, filesystemId, directoryPath, directoryName);
+			CommonCode commonCode = new CommonCode();
+			Node directory = null;
+			try
+			{
+				directory = commonCode.getVersion("directory", userId, filesystemId, directoryPath, directoryName, -1);
+			}
+			catch (VersionNotFound | FileNotFound e) {}
+			Node versionedDirectory = commonCode.copyNode(directory);
+			
+			int directoryLatestVersion = (int) directory.getProperty("version");
+			versionedDirectory.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
+			versionedDirectory.setProperty("version", directoryLatestVersion + 1);
+			for(Entry<String, Object> entry : changedProperties.entrySet())
+			{
+				versionedDirectory.setProperty(entry.getKey(), entry.getValue());
+			}
+			
+			Relationship relationship = directory.createRelationshipTo(versionedDirectory, RelationshipLabels.hasVersion);
+			for(Entry<String, Object> entry : changeMetadata.entrySet())
+			{
+				relationship.setProperty(entry.getKey(), entry.getValue());
+			}
+			
+			transaction.success();
+		}
+	}
+	
+	@Override
+	public Map<String, Object> getDirectory(String userId, String filesystemId, String directoryPath, String directoryName, int version) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, VersionNotFound
+	{
+		try(Transaction transaction = this.graphDatabaseService.beginTx())
+		{
+			Node directory = null;
+			try
+			{
+				directory = new CommonCode().getVersion("directory", userId, filesystemId, directoryPath, directoryName, version);
+			}
+			catch (FileNotFound e) {}
 			Map<String, Object> directoryProperties = new HashMap<String, Object>();
 			
 			Iterable<String> keys = directory.getPropertyKeys();

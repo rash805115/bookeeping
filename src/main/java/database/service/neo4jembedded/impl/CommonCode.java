@@ -100,6 +100,7 @@ public class CommonCode
 		{
 			String directoryName = filePath.substring(filePath.lastIndexOf("/") + 1, filePath.length());
 			String directoryPath = filePath.substring(0, filePath.lastIndexOf("/" + directoryName));
+			directoryPath = directoryPath.length() == 0 ? "/" : directoryPath;
 			parentDirectory = this.getDirectory(userId, filesystemId, directoryPath, directoryName);
 		}
 		

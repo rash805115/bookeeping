@@ -11,10 +11,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 import database.neo4j.VersionChangeType;
+import database.service.DirectoryService;
 import database.service.FileService;
 import database.service.FilesystemService;
 import database.service.UserService;
 import exception.DirectoryNotFound;
+import exception.DuplicateDirectory;
 import exception.DuplicateFile;
 import exception.DuplicateFilesystem;
 import exception.DuplicateUser;
@@ -26,6 +28,7 @@ import exception.VersionNotFound;
 public class FileServiceTest
 {
 	private FileService fileService;
+	private DirectoryService directoryService;
 	private FilesystemService filesystemService;
 	private UserService userService;
 	
@@ -33,6 +36,7 @@ public class FileServiceTest
 	public void setup()
 	{
 		this.fileService = new FileServiceImpl();
+		this.directoryService = new DirectoryServiceImpl();
 		this.filesystemService = new FilesystemServiceImpl();
 		this.userService = new UserServiceImpl();
 	}
@@ -41,12 +45,13 @@ public class FileServiceTest
 	public void tearDown()
 	{
 		this.fileService = null;
+		this.directoryService = null;
 		this.filesystemService = null;
 		this.userService = null;
 	}
 	
 	@Test
-	public void testFileServiceImpl() throws DuplicateUser, UserNotFound, DuplicateFilesystem, FilesystemNotFound, DirectoryNotFound, DuplicateFile, FileNotFound, VersionNotFound
+	public void testFileServiceImpl() throws DuplicateUser, UserNotFound, DuplicateFilesystem, FilesystemNotFound, DirectoryNotFound, DuplicateFile, FileNotFound, DuplicateDirectory, VersionNotFound
 	{
 		String userId = "testUser";
 		Map<String, Object> userProperties = new HashMap<String, Object>();
@@ -60,7 +65,21 @@ public class FileServiceTest
 		filesystemProperties.put("backupLocations", "[http://googledrive.com/testUser, http://dropbox.com/testUser]");
 		filesystemProperties.put("dateCreated", new Date().toString());
 		
-		String filePath = "/";
+		String directoryPath = "/";
+		String directoryName = "testFolder";
+		Map<String, Object> directoryProperties = new HashMap<String, Object>();
+		directoryProperties.put("sourceLocation", "testUser:/home/testUser/bookeeping/testFolder");
+		directoryProperties.put("backupLocations", "[http://googledrive.com/testUser/testFolder, http://dropbox.com/testUser/testFolder]");
+		directoryProperties.put("dateCreated", new Date().toString());
+		
+		String directoryPath2 = "/testFolder2";
+		String directoryName2 = "testFolder";
+		Map<String, Object> directoryProperties2 = new HashMap<String, Object>();
+		directoryProperties2.put("sourceLocation", "testUser:/home/testUser/bookeeping/testFolder2/testFolder");
+		directoryProperties2.put("backupLocations", "[http://googledrive.com/testUser/testFolder2/testFolder, http://dropbox.com/testUser/testFolder2/testFolder]");
+		directoryProperties2.put("dateCreated", new Date().toString());
+		
+		String filePath = "/testFolder";
 		String fileName = "test.txt";
 		Map<String, Object> fileProperties = new HashMap<String, Object>();
 		fileProperties.put("sourceLocation", "testUser:/home/testUser/bookeeping/test.txt");
@@ -69,6 +88,8 @@ public class FileServiceTest
 		
 		this.userService.createNewUser(userId, userProperties);
 		this.filesystemService.createNewFilesystem(filesystemId, userId, filesystemProperties);
+		this.directoryService.createNewDirectory(directoryPath, directoryName, filesystemId, userId, directoryProperties);
+		this.directoryService.createNewDirectory(directoryPath2, directoryName2, filesystemId, userId, directoryProperties2);
 		this.fileService.createNewFile(filePath, fileName, filesystemId, userId, fileProperties);
 		
 		Map<String, Object> changeMetadata = new HashMap<String, Object>();

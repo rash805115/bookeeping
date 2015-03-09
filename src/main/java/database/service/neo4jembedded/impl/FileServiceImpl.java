@@ -40,7 +40,7 @@ public class FileServiceImpl implements FileService
 			try
 			{
 				CommonCode commonCode = new CommonCode();
-				if(filePath.equals(""))
+				if(filePath.equals("/"))
 				{
 					parentDirectory = commonCode.getRootDirectory(userId, filesystemId);
 				}
@@ -56,7 +56,7 @@ public class FileServiceImpl implements FileService
 			}
 			catch(FileNotFound fileNotFound)
 			{
-				Node node = this.graphDatabaseService.createNode(NodeLabels.Directory);
+				Node node = this.graphDatabaseService.createNode(NodeLabels.File);
 				node.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
 				node.setProperty("filePath", filePath);
 				node.setProperty("fileName", fileName);
@@ -79,10 +79,11 @@ public class FileServiceImpl implements FileService
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
 			CommonCode commonCode = new CommonCode();
-			Node file = commonCode.getFileVersion(userId, filesystemId, filePath, fileName, -1);
+			Node file = commonCode.getVersion("file", userId, filesystemId, filePath, fileName, -1);
 			Node versionedFile = commonCode.copyNode(file);
 			
 			int fileLatestVersion = (int) file.getProperty("version");
+			versionedFile.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
 			versionedFile.setProperty("version", fileLatestVersion + 1);
 			for(Entry<String, Object> entry : changedProperties.entrySet())
 			{
@@ -104,7 +105,7 @@ public class FileServiceImpl implements FileService
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			Node file = new CommonCode().getFileVersion(userId, filesystemId, filePath, fileName, version);
+			Node file = new CommonCode().getVersion("file", userId, filesystemId, filePath, fileName, version);
 			Map<String, Object> fileProperties = new HashMap<String, Object>();
 			
 			Iterable<String> keys = file.getPropertyKeys();

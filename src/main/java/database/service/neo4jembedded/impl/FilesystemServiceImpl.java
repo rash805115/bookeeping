@@ -42,8 +42,10 @@ public class FilesystemServiceImpl implements FilesystemService
 			}
 			catch(FilesystemNotFound filesystemNotFound)
 			{
+				AutoIncrementServiceImpl autoIncrementServiceImpl = new AutoIncrementServiceImpl();
+				
 				Node node = this.graphDatabaseService.createNode(NodeLabels.Filesystem);
-				node.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
+				node.setProperty("nodeId", autoIncrementServiceImpl.getNextAutoIncrement());
 				node.setProperty("filesystemId", filesystemId);
 				node.setProperty("version", 0);
 				
@@ -52,7 +54,13 @@ public class FilesystemServiceImpl implements FilesystemService
 					node.setProperty(filesystemPropertiesEntry.getKey(), filesystemPropertiesEntry.getValue());
 				}
 				
+				Node rootDirectory = this.graphDatabaseService.createNode(NodeLabels.Directory);
+				rootDirectory.setProperty("nodeId", autoIncrementServiceImpl.getNextAutoIncrement());
+				rootDirectory.setProperty("directoryPath", "/");
+				rootDirectory.setProperty("directoryName", "root");
+				
 				user.createRelationshipTo(node, RelationshipLabels.has);
+				node.createRelationshipTo(rootDirectory, RelationshipLabels.has);
 				transaction.success();
 			}
 		}

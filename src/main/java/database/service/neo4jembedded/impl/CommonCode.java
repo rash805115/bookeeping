@@ -2,6 +2,7 @@ package database.service.neo4jembedded.impl;
 
 import java.util.Iterator;
 
+import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -45,7 +46,7 @@ public class CommonCode
 	public Node getFilesystem(String userId, String filesystemId) throws FilesystemNotFound, UserNotFound
 	{
 		Node user  = this.getUser(userId);
-		Iterable<Relationship> iterable = user.getRelationships(RelationshipLabels.has);
+		Iterable<Relationship> iterable = user.getRelationships(Direction.OUTGOING, RelationshipLabels.has);
 		for(Relationship relationship : iterable)
 		{
 			Node filesystem = relationship.getEndNode();
@@ -63,13 +64,13 @@ public class CommonCode
 	public Node getRootDirectory(String userId, String filesystemId) throws FilesystemNotFound, UserNotFound
 	{
 		Node filesystem = this.getFilesystem(userId, filesystemId);
-		return filesystem.getRelationships(RelationshipLabels.has).iterator().next().getEndNode();
+		return filesystem.getRelationships(Direction.OUTGOING, RelationshipLabels.has).iterator().next().getEndNode();
 	}
 	
 	public Node getDirectory(String userId, String filesystemId, String directoryPath, String directoryName) throws FilesystemNotFound, UserNotFound, DirectoryNotFound
 	{
 		Node rootDirectory = this.getRootDirectory(userId, filesystemId);
-		Iterable<Relationship> iterable = rootDirectory.getRelationships(RelationshipLabels.has);
+		Iterable<Relationship> iterable = rootDirectory.getRelationships(Direction.OUTGOING, RelationshipLabels.has);
 		for(Relationship relationship : iterable)
 		{
 			Node node = relationship.getEndNode();
@@ -91,7 +92,7 @@ public class CommonCode
 	public Node getFile(String userId, String filesystemId, String filePath, String fileName) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, FileNotFound
 	{
 		Node parentDirectory = null;
-		if(filePath.equals(""))
+		if(filePath.equals("/"))
 		{
 			parentDirectory = this.getRootDirectory(userId, filesystemId);
 		}
@@ -121,9 +122,22 @@ public class CommonCode
 		throw new FileNotFound("ERROR: File not found! - \"" + filePath + "/" + fileName + "\"");
 	}
 	
-	public Node getDirectoryVersion(String userId, String filesystemId, String directoryPath, String directoryName, int version) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, VersionNotFound
+	public Node getVersion(String nodeType, String userId, String filesystemId, String path, String name, int version) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
 	{
-		Node node = this.getDirectory(userId, filesystemId, directoryPath, directoryName);
+		Node node = null;
+		if(nodeType.equalsIgnoreCase("filesystem"))
+		{
+			node = this.getFilesystem(userId, filesystemId);
+		}
+		else if(nodeType.equalsIgnoreCase("directory"))
+		{
+			node = this.getDirectory(userId, filesystemId, path, name);
+		}
+		else
+		{
+			node = this.getFile(userId, filesystemId, path, name);
+		}
+		
 		do
 		{
 			if(version != -1)
@@ -135,7 +149,7 @@ public class CommonCode
 				}
 			}
 			
-			Iterator<Relationship> iterator = node.getRelationships(RelationshipLabels.hasVersion).iterator();
+			Iterator<Relationship> iterator = node.getRelationships(Direction.OUTGOING, RelationshipLabels.hasVersion).iterator();
 			if(iterator.hasNext())
 			{
 				node = iterator.next().getEndNode();
@@ -154,43 +168,18 @@ public class CommonCode
 		}
 		while(node != null);
 		
-		throw new VersionNotFound("ERROR: Version not found! - \"" + directoryPath + "/" + directoryName + "\", Version - \"" + version + "\"");
-	}
-	
-	public Node getFileVersion(String userId, String filesystemId, String filePath, String fileName, int version) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
-	{
-		Node node = this.getFile(userId, filesystemId, filePath, fileName);
-		do
+		if(nodeType.equalsIgnoreCase("filesystem"))
 		{
-			if(version != -1)
-			{
-				int retrievedVersion = (int) node.getProperty("version");
-				if(retrievedVersion == version)
-				{
-					return node;
-				}
-			}
-			
-			Iterator<Relationship> iterator = node.getRelationships(RelationshipLabels.hasVersion).iterator();
-			if(iterator.hasNext())
-			{
-				node = iterator.next().getEndNode();
-			}
-			else
-			{
-				if(version == -1)
-				{
-					return node;
-				}
-				else
-				{
-					node = null;
-				}
-			}
+			throw new VersionNotFound("ERROR: Version not found! - Filesystem: \"" + filesystemId + "\", Version - \"" + version + "\"");
 		}
-		while(node != null);
-		
-		throw new VersionNotFound("ERROR: Version not found! - \"" + filePath + "/" + fileName + "\", Version - \"" + version + "\"");
+		else if(nodeType.equalsIgnoreCase("directory"))
+		{
+			throw new VersionNotFound("ERROR: Version not found! - Directory: \"" + path + "/" + name + "\", Version - \"" + version + "\"");
+		}
+		else
+		{
+			throw new VersionNotFound("ERROR: Version not found! - File: \"" + path + "/" + name + "\", Version - \"" + version + "\"");
+		}
 	}
 	
 	public Node copyNode(Node node)

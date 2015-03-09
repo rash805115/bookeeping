@@ -1,5 +1,7 @@
 package database.service.neo4jembedded.impl;
 
+import java.util.Iterator;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -12,6 +14,7 @@ import exception.DirectoryNotFound;
 import exception.FileNotFound;
 import exception.FilesystemNotFound;
 import exception.UserNotFound;
+import exception.VersionNotFound;
 
 public class CommonCode
 {
@@ -116,5 +119,88 @@ public class CommonCode
 		}
 		
 		throw new FileNotFound("ERROR: File not found! - \"" + filePath + "/" + fileName + "\"");
+	}
+	
+	public Node getDirectoryVersion(String userId, String filesystemId, String directoryPath, String directoryName, int version) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, VersionNotFound
+	{
+		Node node = this.getDirectory(userId, filesystemId, directoryPath, directoryName);
+		do
+		{
+			if(version != -1)
+			{
+				int retrievedVersion = (int) node.getProperty("version");
+				if(retrievedVersion == version)
+				{
+					return node;
+				}
+			}
+			
+			Iterator<Relationship> iterator = node.getRelationships(RelationshipLabels.hasVersion).iterator();
+			if(iterator.hasNext())
+			{
+				node = iterator.next().getEndNode();
+			}
+			else
+			{
+				if(version == -1)
+				{
+					return node;
+				}
+				else
+				{
+					node = null;
+				}
+			}
+		}
+		while(node != null);
+		
+		throw new VersionNotFound("ERROR: Version not found! - \"" + directoryPath + "/" + directoryName + "\", Version - \"" + version + "\"");
+	}
+	
+	public Node getFileVersion(String userId, String filesystemId, String filePath, String fileName, int version) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
+	{
+		Node node = this.getFile(userId, filesystemId, filePath, fileName);
+		do
+		{
+			if(version != -1)
+			{
+				int retrievedVersion = (int) node.getProperty("version");
+				if(retrievedVersion == version)
+				{
+					return node;
+				}
+			}
+			
+			Iterator<Relationship> iterator = node.getRelationships(RelationshipLabels.hasVersion).iterator();
+			if(iterator.hasNext())
+			{
+				node = iterator.next().getEndNode();
+			}
+			else
+			{
+				if(version == -1)
+				{
+					return node;
+				}
+				else
+				{
+					node = null;
+				}
+			}
+		}
+		while(node != null);
+		
+		throw new VersionNotFound("ERROR: Version not found! - \"" + filePath + "/" + fileName + "\", Version - \"" + version + "\"");
+	}
+	
+	public Node copyNode(Node node)
+	{
+		Node copyNode = this.graphDatabaseService.createNode(node.getLabels().iterator().next());
+		for(String key : node.getPropertyKeys())
+		{
+			copyNode.setProperty(key, node.getProperty(key));
+		}
+		
+		return copyNode;
 	}
 }

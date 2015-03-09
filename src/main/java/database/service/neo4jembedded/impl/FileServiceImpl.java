@@ -6,6 +6,7 @@ import java.util.Map.Entry;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 
 import database.connection.singleton.Neo4JEmbeddedConnection;
@@ -17,6 +18,7 @@ import exception.DuplicateFile;
 import exception.FileNotFound;
 import exception.FilesystemNotFound;
 import exception.UserNotFound;
+import exception.VersionNotFound;
 
 public class FileServiceImpl implements FileService
 {
@@ -70,13 +72,39 @@ public class FileServiceImpl implements FileService
 			}
 		}
 	}
-
+	
 	@Override
-	public Map<String, Object> getFile(String userId, String filesystemId, String filePath, String fileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound
+	public void createNewVersion(String userId, String filesystemId, String filePath, String fileName, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			Node file = new CommonCode().getFile(userId, filesystemId, filePath, fileName);
+			CommonCode commonCode = new CommonCode();
+			Node file = commonCode.getFileVersion(userId, filesystemId, filePath, fileName, -1);
+			Node versionedFile = commonCode.copyNode(file);
+			
+			int fileLatestVersion = (int) file.getProperty("version");
+			versionedFile.setProperty("version", fileLatestVersion + 1);
+			for(Entry<String, Object> entry : changedProperties.entrySet())
+			{
+				versionedFile.setProperty(entry.getKey(), entry.getValue());
+			}
+			
+			Relationship relationship = file.createRelationshipTo(versionedFile, RelationshipLabels.hasVersion);
+			for(Entry<String, Object> entry : changeMetadata.entrySet())
+			{
+				relationship.setProperty(entry.getKey(), entry.getValue());
+			}
+			
+			transaction.success();
+		}
+	}
+
+	@Override
+	public Map<String, Object> getFile(String userId, String filesystemId, String filePath, String fileName, int version) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
+	{
+		try(Transaction transaction = this.graphDatabaseService.beginTx())
+		{
+			Node file = new CommonCode().getFileVersion(userId, filesystemId, filePath, fileName, version);
 			Map<String, Object> fileProperties = new HashMap<String, Object>();
 			
 			Iterable<String> keys = file.getPropertyKeys();

@@ -10,6 +10,8 @@ import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.schema.TitanManagement;
 import com.tinkerpop.blueprints.Vertex;
 
+import database.titan.NodeLabels;
+
 public class TitanCassandraEmbeddedConnection
 {
 	private static TitanCassandraEmbeddedConnection titanCassandraEmbeddedConnection;
@@ -35,14 +37,12 @@ public class TitanCassandraEmbeddedConnection
 		
 		try
 		{
-			if(! this.titanGraph.containsVertexLabel("AutoIncrement"))
+			for(NodeLabels nodeLabels : NodeLabels.values())
 			{
-				titanManagement.makeVertexLabel("AutoIncrement").make();
-			}
-			
-			if(! this.titanGraph.containsVertexLabel("User"))
-			{
-				titanManagement.makeVertexLabel("User").make();
+				if(! this.titanGraph.containsVertexLabel(nodeLabels.name()))
+				{
+					titanManagement.makeVertexLabel(nodeLabels.name()).make();
+				}
 			}
 			
 			if(! this.titanGraph.containsPropertyKey("nodeId"))

@@ -57,12 +57,12 @@ public class UserServiceImpl implements UserService
 	}
 
 	@Override
-	public long countUsers()
+	public int countUsers()
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
 			Iterator<Map<String, Object>> iterator = this.neo4jEmbeddedConnection.runCypherQuery(new CypherQueryBuilder(QueryType.MATCH_COUNT).buildQuery(NodeLabels.User, new HashMap<String, Object>(), true), new HashMap<String, Object>());
-			long count = (long) iterator.next().get("count");
+			int count = (int) iterator.next().get("count");
 			transaction.success();
 			return count;
 		}

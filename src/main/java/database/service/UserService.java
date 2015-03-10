@@ -9,7 +9,7 @@ import exception.UserNotFound;
 public interface UserService
 {
 	public void createNewUser(String userId, Map<String, Object> userProperties) throws DuplicateUser;
-	public long countUsers();
+	public int countUsers();
 	
 	public Map<String, Object> getUser(String userId) throws UserNotFound;
 	public List<Map<String, Object>> getUsersByMatchingAllProperty(Map<String, Object> userProperties);

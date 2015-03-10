@@ -2,6 +2,7 @@ package database.service.neo4jembedded.impl;
 
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.index.ReadableIndex;
@@ -183,7 +184,12 @@ public class CommonCode
 	
 	public Node copyNode(Node node)
 	{
-		Node copyNode = this.graphDatabaseService.createNode(node.getLabels().iterator().next());
+		Node copyNode = this.graphDatabaseService.createNode();
+		for(Label label : node.getLabels())
+		{
+			copyNode.addLabel(label);
+		}
+		
 		for(String key : node.getPropertyKeys())
 		{
 			copyNode.setProperty(key, node.getProperty(key));

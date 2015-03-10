@@ -1,5 +1,8 @@
 package database.service.neo4jembedded.impl;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -194,7 +197,53 @@ public class CommonCode
 		{
 			copyNode.setProperty(key, node.getProperty(key));
 		}
+		copyNode.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
 		
 		return copyNode;
+	}
+	
+	public Node copyNodeTree(Node node)
+	{
+		List<Node> pendingNodeList = new ArrayList<Node>();
+		pendingNodeList.add(node);
+		
+		List<Node> pendingNodeCopyList = new ArrayList<Node>();
+		Node rootNodeCopy = this.copyNode(node);
+		pendingNodeCopyList.add(rootNodeCopy);
+		
+		do
+		{
+			List<Node> childNodeList = new ArrayList<Node>();
+			List<Node> childNodeCopyList = new ArrayList<Node>();
+			for(int i = 0; i < pendingNodeList.size(); i++)
+			{
+				Node currentNode = pendingNodeList.get(i);
+				Node currentNodeCopy = pendingNodeCopyList.get(i);
+				
+				Iterable<Relationship> currentNodeRelationships = currentNode.getRelationships(Direction.OUTGOING);
+				for(Relationship relationship : currentNodeRelationships)
+				{
+					Node childNode = relationship.getEndNode();
+					Node childNodeCopy = this.copyNode(childNode);
+					Relationship currentNodeCopyRelationship = currentNodeCopy.createRelationshipTo(childNodeCopy, relationship.getType());
+					
+					for(String key : relationship.getPropertyKeys())
+					{
+						currentNodeCopyRelationship.setProperty(key, relationship.getProperty(key));
+					}
+					
+					childNodeList.add(childNode);
+					childNodeCopyList.add(childNodeCopy);
+				}
+			}
+			
+			pendingNodeList.clear();
+			pendingNodeList.addAll(childNodeList);
+			pendingNodeCopyList.clear();
+			pendingNodeCopyList.addAll(childNodeCopyList);
+		}
+		while(! pendingNodeList.isEmpty());
+		
+		return rootNodeCopy;
 	}
 }

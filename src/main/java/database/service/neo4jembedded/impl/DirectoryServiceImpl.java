@@ -79,7 +79,6 @@ public class DirectoryServiceImpl implements DirectoryService
 			Node versionedDirectory = commonCode.copyNode(directory);
 			
 			int directoryLatestVersion = (int) directory.getProperty("version");
-			versionedDirectory.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
 			versionedDirectory.setProperty("version", directoryLatestVersion + 1);
 			for(Entry<String, Object> entry : changedProperties.entrySet())
 			{

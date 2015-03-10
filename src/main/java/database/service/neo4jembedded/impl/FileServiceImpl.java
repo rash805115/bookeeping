@@ -90,7 +90,6 @@ public class FileServiceImpl implements FileService
 			Node versionedFile = commonCode.copyNode(file);
 			
 			int fileLatestVersion = (int) file.getProperty("version");
-			versionedFile.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
 			versionedFile.setProperty("version", fileLatestVersion + 1);
 			for(Entry<String, Object> entry : changedProperties.entrySet())
 			{

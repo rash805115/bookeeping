@@ -155,7 +155,7 @@ public class FilesystemServiceImpl implements FilesystemService
 			Vertex filesystem = null;
 			try
 			{
-				filesystem = new CommonCode().getVersion("filesystem", userId, filesystemId, null, null, -1);
+				filesystem = new CommonCode().getVersion("filesystem", userId, filesystemId, null, null, version);
 			}
 			catch (FileNotFound | DirectoryNotFound e) {}
 			Map<String, Object> filesystemProperties = new HashMap<String, Object>();

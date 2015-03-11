@@ -18,6 +18,7 @@ import exception.DuplicateFilesystem;
 import exception.DuplicateUser;
 import exception.FilesystemNotFound;
 import exception.UserNotFound;
+import exception.VersionNotFound;
 
 public class FilesystemServiceTest
 {
@@ -39,7 +40,7 @@ public class FilesystemServiceTest
 	}
 	
 	@Test
-	public void testFilesystemServiceImpl() throws DuplicateUser, UserNotFound, DuplicateFilesystem, FilesystemNotFound
+	public void testFilesystemServiceImpl() throws DuplicateUser, UserNotFound, DuplicateFilesystem, FilesystemNotFound, VersionNotFound
 	{
 		String userId = "testUser";
 		Map<String, Object> userProperties = new HashMap<String, Object>();
@@ -55,7 +56,7 @@ public class FilesystemServiceTest
 		
 		this.userService.createNewUser(userId, userProperties);
 		this.filesystemService.createNewFilesystem(filesystemId, userId, filesystemProperties);
-		Map<String, Object> retrievedFilesystemProperties = this.filesystemService.getFilesystem(userId, filesystemId);
+		Map<String, Object> retrievedFilesystemProperties = this.filesystemService.getFilesystem(userId, filesystemId, -1);
 		assertEquals(filesystemProperties.size() + 3, retrievedFilesystemProperties.size());
 	}
 	

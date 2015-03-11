@@ -195,7 +195,10 @@ public class CommonCode
 		
 		for(String key : node.getPropertyKeys())
 		{
-			copyNode.setProperty(key, node.getProperty(key));
+			if(! key.equals("nodeId"))
+			{
+				copyNode.setProperty(key, node.getProperty(key));
+			}
 		}
 		copyNode.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
 		

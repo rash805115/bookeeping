@@ -14,6 +14,7 @@ import database.connection.singleton.Neo4JRestConnection;
 import database.neo4j.NodeLabels;
 import database.neo4j.RelationshipLabels;
 import database.service.FilesystemService;
+import database.service.neo4jembedded.impl.CommonCode;
 import exception.DirectoryNotFound;
 import exception.DuplicateFilesystem;
 import exception.FileNotFound;
@@ -121,11 +122,16 @@ public class FilesystemServiceImpl implements FilesystemService
 	}
 
 	@Override
-	public Map<String, Object> getFilesystem(String userId, String filesystemId) throws UserNotFound, FilesystemNotFound
+	public Map<String, Object> getFilesystem(String userId, String filesystemId, int version) throws UserNotFound, FilesystemNotFound, VersionNotFound
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			Node filesystem = new CommonCode().getFilesystem(userId, filesystemId);
+			Node filesystem = null;
+			try
+			{
+				filesystem = new CommonCode().getVersion("filesystem", userId, filesystemId, null, null, -1);
+			}
+			catch (FileNotFound | DirectoryNotFound e) {}
 			Map<String, Object> filesystemProperties = new HashMap<String, Object>();
 			
 			Iterable<String> keys = filesystem.getPropertyKeys();

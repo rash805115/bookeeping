@@ -45,10 +45,20 @@ public class CommonCode
 		}
 	}
 	
-	public Node getFilesystem(String userId, String filesystemId) throws FilesystemNotFound, UserNotFound
+	public Node getFilesystem(String userId, String filesystemId, boolean deleted) throws FilesystemNotFound, UserNotFound
 	{
 		Node user  = this.getUser(userId);
-		Iterable<Relationship> iterable = user.getRelationships(Direction.OUTGOING, RelationshipLabels.has);
+		Iterable<Relationship> iterable;
+		
+		if(deleted)
+		{
+			iterable = user.getRelationships(Direction.OUTGOING, RelationshipLabels.had);
+		}
+		else
+		{
+			iterable = user.getRelationships(Direction.OUTGOING, RelationshipLabels.has);
+		}
+		
 		for(Relationship relationship : iterable)
 		{
 			Node filesystem = relationship.getEndNode();
@@ -65,7 +75,7 @@ public class CommonCode
 	
 	public Node getRootDirectory(String userId, String filesystemId) throws FilesystemNotFound, UserNotFound
 	{
-		Node filesystem = this.getFilesystem(userId, filesystemId);
+		Node filesystem = this.getFilesystem(userId, filesystemId, false);
 		return filesystem.getSingleRelationship(RelationshipLabels.has, Direction.OUTGOING).getEndNode();
 	}
 	
@@ -130,7 +140,7 @@ public class CommonCode
 		Node node = null;
 		if(nodeType.equalsIgnoreCase("filesystem"))
 		{
-			node = this.getFilesystem(userId, filesystemId);
+			node = this.getFilesystem(userId, filesystemId, false);
 		}
 		else if(nodeType.equalsIgnoreCase("directory"))
 		{

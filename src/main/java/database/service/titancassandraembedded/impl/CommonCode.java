@@ -41,10 +41,20 @@ public class CommonCode
 		}
 	}
 	
-	public Vertex getFilesystem(String userId, String filesystemId) throws FilesystemNotFound, UserNotFound
+	public Vertex getFilesystem(String userId, String filesystemId, boolean deleted) throws FilesystemNotFound, UserNotFound
 	{
 		Vertex user = this.getUser(userId);
-		Iterable<Vertex> iterable = user.getVertices(Direction.OUT, RelationshipLabels.has.name());
+		Iterable<Vertex> iterable;
+		
+		if(deleted)
+		{
+			iterable = user.getVertices(Direction.OUT, RelationshipLabels.had.name());
+		}
+		else
+		{
+			iterable = user.getVertices(Direction.OUT, RelationshipLabels.has.name());
+		}
+		
 		for(Vertex vertex : iterable)
 		{
 			String retrievedFilesystemId = vertex.getProperty("filesystemId");
@@ -59,7 +69,7 @@ public class CommonCode
 	
 	public Vertex getRootDirectory(String userId, String filesystemId) throws FilesystemNotFound, UserNotFound
 	{
-		Vertex filesystem = this.getFilesystem(userId, filesystemId);
+		Vertex filesystem = this.getFilesystem(userId, filesystemId, false);
 		return filesystem.getVertices(Direction.OUT, RelationshipLabels.has.name()).iterator().next();
 	}
 	
@@ -116,7 +126,7 @@ public class CommonCode
 		Vertex node = null;
 		if(nodeType.equalsIgnoreCase("filesystem"))
 		{
-			node = this.getFilesystem(userId, filesystemId);
+			node = this.getFilesystem(userId, filesystemId, false);
 		}
 		else if(nodeType.equalsIgnoreCase("directory"))
 		{

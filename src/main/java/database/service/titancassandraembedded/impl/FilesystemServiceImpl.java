@@ -42,7 +42,7 @@ public class FilesystemServiceImpl implements FilesystemService
 			{
 				CommonCode commonCode = new CommonCode();
 				user = commonCode.getUser(userId);
-				commonCode.getFilesystem(userId, filesystemId);
+				commonCode.getFilesystem(userId, filesystemId, false);
 				throw new DuplicateFilesystem("ERROR: Filesystem already present! - \"" + filesystemId + "\"");
 			}
 			catch(FilesystemNotFound filesystemNotFound)
@@ -123,7 +123,7 @@ public class FilesystemServiceImpl implements FilesystemService
 		
 		try
 		{
-			Vertex filesystem = new CommonCode().getFilesystem(userId, filesystemId);
+			Vertex filesystem = new CommonCode().getFilesystem(userId, filesystemId, false);
 			Edge hasRelationship = filesystem.getEdges(Direction.IN, RelationshipLabels.has.name()).iterator().next();
 			Vertex parentDirectory = hasRelationship.getVertex(Direction.OUT);
 			
@@ -134,6 +134,35 @@ public class FilesystemServiceImpl implements FilesystemService
 			}
 			
 			hasRelationship.remove();
+			titanTransaction.commit();
+		}
+		finally
+		{
+			if(titanTransaction.isOpen())
+			{
+				titanTransaction.rollback();
+			}
+		}
+	}
+	
+	@Override
+	public void restoreTemporaryDeletedFilesystem(String userId, String filesystemId) throws UserNotFound, FilesystemNotFound
+	{
+		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
+		
+		try
+		{
+			Vertex filesystem = new CommonCode().getFilesystem(userId, filesystemId, false);
+			Edge hadRelationship = filesystem.getEdges(Direction.IN, RelationshipLabels.had.name()).iterator().next();
+			Vertex parentDirectory = hadRelationship.getVertex(Direction.OUT);
+			
+			Edge hasRelationship = parentDirectory.addEdge(RelationshipLabels.has.name(), filesystem);
+			for(String key : hadRelationship.getPropertyKeys())
+			{
+				hasRelationship.setProperty(key, hadRelationship.getProperty(key));
+			}
+			
+			hadRelationship.remove();
 			titanTransaction.commit();
 		}
 		finally

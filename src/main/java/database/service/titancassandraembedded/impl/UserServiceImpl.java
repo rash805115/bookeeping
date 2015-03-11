@@ -1,7 +1,7 @@
 package database.service.titancassandraembedded.impl;
 
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -31,19 +31,12 @@ public class UserServiceImpl implements UserService
 		
 		try
 		{
-			Iterator<Vertex> iterator = this.titanGraph.getVertices("userId", userId).iterator();
-			Vertex user = null;
-			while(iterator.hasNext())
+			try
 			{
-				user = iterator.next();
-			}
-			
-			if(user != null)
-			{
-				titanTransaction.commit();
+				new CommonCode().getUser(userId);
 				throw new DuplicateUser("ERROR: User already present! - \"" + userId + "\"");
 			}
-			else
+			catch(UserNotFound userNotFound)
 			{
 				Vertex vertex = this.titanGraph.addVertexWithLabel(NodeLabels.User.name());
 				vertex.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
@@ -65,6 +58,12 @@ public class UserServiceImpl implements UserService
 			}
 		}
 	}
+	
+	@Override
+	public int countUsers()
+	{
+		return 0;
+	}
 
 	@Override
 	public Map<String, Object> getUser(String userId) throws UserNotFound
@@ -73,31 +72,17 @@ public class UserServiceImpl implements UserService
 		
 		try
 		{
-			Iterator<Vertex> iterator = this.titanGraph.getVertices("userId", userId).iterator();
-			Vertex user = null;
-			while(iterator.hasNext())
+			Vertex user = new CommonCode().getUser(userId);
+			Map<String, Object> userProperties = new HashMap<String, Object>();
+			
+			Iterable<String> iterable = user.getPropertyKeys();
+			for(String key : iterable)
 			{
-				user = iterator.next();
+				userProperties.put(key, user.getProperty(key));
 			}
 			
-			if(user == null)
-			{
-				titanTransaction.commit();
-				throw new UserNotFound("ERROR: User not found! - \"" + userId + "\"");
-			}
-			else
-			{
-				Map<String, Object> userProperties = new HashMap<String, Object>();
-				
-				Iterable<String> iterable = user.getPropertyKeys();
-				for(String key : iterable)
-				{
-					userProperties.put(key, user.getProperty(key));
-				}
-				
-				titanTransaction.commit();
-				return userProperties;
-			}
+			titanTransaction.commit();
+			return userProperties;
 		}
 		finally
 		{
@@ -106,5 +91,17 @@ public class UserServiceImpl implements UserService
 				titanTransaction.rollback();
 			}
 		}
+	}
+	
+	@Override
+	public List<Map<String, Object>> getUsersByMatchingAllProperty(Map<String, Object> userProperties)
+	{
+		return null;
+	}
+	
+	@Override
+	public List<Map<String, Object>> getUsersByMatchingAnyProperty(Map<String, Object> userProperties)
+	{
+		return null;
 	}
 }

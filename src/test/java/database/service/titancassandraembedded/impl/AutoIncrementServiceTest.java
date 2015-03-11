@@ -30,7 +30,6 @@ public class AutoIncrementServiceTest
 	{
 		String nextAutoIncrement1 = this.autoIncrementService.getNextAutoIncrement();
 		String nextAutoIncrement2 = this.autoIncrementService.getNextAutoIncrement();
-		
 		assertEquals(AlphaNumericOperation.add(nextAutoIncrement1, 1), nextAutoIncrement2);
 	}
 }

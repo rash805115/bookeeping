@@ -9,6 +9,7 @@ import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.TitanTransaction;
 import com.tinkerpop.blueprints.Vertex;
 
+import database.MandatoryProperties;
 import database.connection.singleton.TitanCassandraEmbeddedConnection;
 import database.service.UserService;
 import database.titan.NodeLabels;
@@ -39,8 +40,8 @@ public class UserServiceImpl implements UserService
 			catch(UserNotFound userNotFound)
 			{
 				Vertex vertex = this.titanGraph.addVertexWithLabel(NodeLabels.User.name());
-				vertex.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
-				vertex.setProperty("userId", userId);
+				vertex.setProperty(MandatoryProperties.nodeId.name(), new AutoIncrementServiceImpl().getNextAutoIncrement());
+				vertex.setProperty(MandatoryProperties.userId.name(), userId);
 				
 				for(Entry<String, Object> userPropertiesEntry : userProperties.entrySet())
 				{

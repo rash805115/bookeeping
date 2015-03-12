@@ -10,6 +10,7 @@ import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
 
+import database.MandatoryProperties;
 import database.connection.singleton.TitanCassandraEmbeddedConnection;
 import database.service.FilesystemService;
 import database.titan.NodeLabels;
@@ -50,8 +51,8 @@ public class FilesystemServiceImpl implements FilesystemService
 				AutoIncrementServiceImpl autoIncrementServiceImpl = new AutoIncrementServiceImpl();
 				
 				Vertex node = this.titanGraph.addVertexWithLabel(NodeLabels.Filesystem.name());
-				node.setProperty("nodeId", autoIncrementServiceImpl.getNextAutoIncrement());
-				node.setProperty("filesystemId", filesystemId);
+				node.setProperty(MandatoryProperties.nodeId.name(), autoIncrementServiceImpl.getNextAutoIncrement());
+				node.setProperty(MandatoryProperties.filesystemId.name(), filesystemId);
 				node.setProperty("version", 0);
 				
 				for(Entry<String, Object> filesystemPropertiesEntry : filesystemProperties.entrySet())
@@ -60,7 +61,7 @@ public class FilesystemServiceImpl implements FilesystemService
 				}
 				
 				Vertex rootDirectory = this.titanGraph.addVertexWithLabel(NodeLabels.Directory.name());
-				rootDirectory.setProperty("nodeId", autoIncrementServiceImpl.getNextAutoIncrement());
+				rootDirectory.setProperty(MandatoryProperties.nodeId.name(), autoIncrementServiceImpl.getNextAutoIncrement());
 				
 				user.addEdge(RelationshipLabels.has.name(), node);
 				node.addEdge(RelationshipLabels.has.name(), rootDirectory);

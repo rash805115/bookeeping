@@ -10,6 +10,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 
+import database.MandatoryProperties;
 import database.connection.singleton.Neo4JRestConnection;
 import database.neo4j.NodeLabels;
 import database.neo4j.RelationshipLabels;
@@ -59,9 +60,9 @@ public class FileServiceImpl implements FileService
 			catch(FileNotFound fileNotFound)
 			{
 				Node node = this.graphDatabaseService.createNode(NodeLabels.File);
-				node.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
-				node.setProperty("filePath", filePath);
-				node.setProperty("fileName", fileName);
+				node.setProperty(MandatoryProperties.nodeId.name(), new AutoIncrementServiceImpl().getNextAutoIncrement());
+				node.setProperty(MandatoryProperties.filePath.name(), filePath);
+				node.setProperty(MandatoryProperties.fileName.name(), fileName);
 				node.setProperty("version", 0);
 				
 				for(Entry<String, Object> filePropertiesEntry : fileProperties.entrySet())

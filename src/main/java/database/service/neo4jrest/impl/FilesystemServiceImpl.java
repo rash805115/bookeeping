@@ -10,6 +10,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 
+import database.MandatoryProperties;
 import database.connection.singleton.Neo4JRestConnection;
 import database.neo4j.NodeLabels;
 import database.neo4j.RelationshipLabels;
@@ -50,8 +51,8 @@ public class FilesystemServiceImpl implements FilesystemService
 				AutoIncrementServiceImpl autoIncrementServiceImpl = new AutoIncrementServiceImpl();
 				
 				Node node = this.graphDatabaseService.createNode(NodeLabels.Filesystem);
-				node.setProperty("nodeId", autoIncrementServiceImpl.getNextAutoIncrement());
-				node.setProperty("filesystemId", filesystemId);
+				node.setProperty(MandatoryProperties.nodeId.name(), autoIncrementServiceImpl.getNextAutoIncrement());
+				node.setProperty(MandatoryProperties.filesystemId.name(), filesystemId);
 				node.setProperty("version", 0);
 				
 				for(Entry<String, Object> filesystemPropertiesEntry : filesystemProperties.entrySet())
@@ -60,7 +61,7 @@ public class FilesystemServiceImpl implements FilesystemService
 				}
 				
 				Node rootDirectory = this.graphDatabaseService.createNode(NodeLabels.Directory);
-				rootDirectory.setProperty("nodeId", autoIncrementServiceImpl.getNextAutoIncrement());
+				rootDirectory.setProperty(MandatoryProperties.nodeId.name(), autoIncrementServiceImpl.getNextAutoIncrement());
 				
 				user.createRelationshipTo(node, RelationshipLabels.has);
 				node.createRelationshipTo(rootDirectory, RelationshipLabels.has);

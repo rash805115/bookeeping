@@ -10,11 +10,11 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import database.VersionChangeType;
 import database.service.DirectoryService;
 import database.service.FileService;
 import database.service.FilesystemService;
 import database.service.UserService;
-import database.titan.VersionChangeType;
 import exception.DirectoryNotFound;
 import exception.DuplicateDirectory;
 import exception.DuplicateFile;

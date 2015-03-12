@@ -10,6 +10,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.index.ReadableIndex;
 
+import database.MandatoryProperties;
 import database.connection.singleton.Neo4JRestConnection;
 import database.neo4j.NodeLabels;
 import database.neo4j.RelationshipLabels;
@@ -33,7 +34,7 @@ public class CommonCode
 	public Node getUser(String userId) throws UserNotFound
 	{
 		ReadableIndex<Node> readableIndex = this.graphDatabaseService.index().getNodeAutoIndexer().getAutoIndex();
-		Node user = readableIndex.get("userId", userId).getSingle();
+		Node user = readableIndex.get(MandatoryProperties.userId.name(), userId).getSingle();
 		
 		if(user == null)
 		{
@@ -61,7 +62,7 @@ public class CommonCode
 		for(Relationship relationship : iterable)
 		{
 			Node filesystem = relationship.getEndNode();
-			String retrievedFilesystemId = (String) filesystem.getProperty("filesystemId");
+			String retrievedFilesystemId = (String) filesystem.getProperty(MandatoryProperties.filesystemId.name());
 			
 			if(retrievedFilesystemId.equals(filesystemId))
 			{
@@ -96,8 +97,8 @@ public class CommonCode
 			Node node = relationship.getEndNode();
 			if(node.hasLabel(NodeLabels.Directory))
 			{
-				String retrievedDirectoryPath = (String) node.getProperty("directoryPath");
-				String retrievedDirectoryName = (String) node.getProperty("directoryName");
+				String retrievedDirectoryPath = (String) node.getProperty(MandatoryProperties.directoryPath.name());
+				String retrievedDirectoryName = (String) node.getProperty(MandatoryProperties.directoryName.name());
 				
 				if(retrievedDirectoryPath.equals(directoryPath) && retrievedDirectoryName.equals(directoryName))
 				{
@@ -139,8 +140,8 @@ public class CommonCode
 			Node node = relationship.getEndNode();
 			if(node.hasLabel(NodeLabels.File))
 			{
-				String retrievedFilePath = (String) node.getProperty("filePath");
-				String retrievedFileName = (String) node.getProperty("fileName");
+				String retrievedFilePath = (String) node.getProperty(MandatoryProperties.filePath.name());
+				String retrievedFileName = (String) node.getProperty(MandatoryProperties.fileName.name());
 				
 				if(retrievedFilePath.equals(filePath) && retrievedFileName.equals(fileName))
 				{
@@ -222,12 +223,12 @@ public class CommonCode
 		
 		for(String key : node.getPropertyKeys())
 		{
-			if(! key.equals("nodeId"))
+			if(! key.equals(MandatoryProperties.nodeId.name()))
 			{
 				copyNode.setProperty(key, node.getProperty(key));
 			}
 		}
-		copyNode.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
+		copyNode.setProperty(MandatoryProperties.nodeId.name(), new AutoIncrementServiceImpl().getNextAutoIncrement());
 		
 		return copyNode;
 	}

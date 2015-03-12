@@ -10,7 +10,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import database.neo4j.VersionChangeType;
+import database.VersionChangeType;
 import database.service.DirectoryService;
 import database.service.FileService;
 import database.service.FilesystemService;

@@ -1,4 +1,4 @@
-package database.neo4j;
+package database;
 
 public enum VersionChangeType
 {

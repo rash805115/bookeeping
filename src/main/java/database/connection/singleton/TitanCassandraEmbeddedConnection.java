@@ -11,6 +11,7 @@ import com.thinkaurelius.titan.core.TitanTransaction;
 import com.thinkaurelius.titan.core.schema.TitanManagement;
 import com.tinkerpop.blueprints.Vertex;
 
+import database.MandatoryProperties;
 import database.titan.NodeLabels;
 
 public class TitanCassandraEmbeddedConnection
@@ -47,15 +48,15 @@ public class TitanCassandraEmbeddedConnection
 				}
 			}
 			
-			if(! this.titanGraph.containsPropertyKey("nodeId"))
+			if(! this.titanGraph.containsPropertyKey(MandatoryProperties.nodeId.name()))
 			{
-				PropertyKey nodeIdPropertyKey = titanManagement.makePropertyKey("nodeId").dataType(String.class).make();
+				PropertyKey nodeIdPropertyKey = titanManagement.makePropertyKey(MandatoryProperties.nodeId.name()).dataType(String.class).make();
 				titanManagement.buildIndex("nodeIdIndex", Vertex.class).addKey(nodeIdPropertyKey).unique().buildCompositeIndex();
 			}
 			
-			if(! this.titanGraph.containsPropertyKey("userId"))
+			if(! this.titanGraph.containsPropertyKey(MandatoryProperties.userId.name()))
 			{
-				PropertyKey userIdPropertyKey = titanManagement.makePropertyKey("userId").dataType(String.class).make();
+				PropertyKey userIdPropertyKey = titanManagement.makePropertyKey(MandatoryProperties.userId.name()).dataType(String.class).make();
 				titanManagement.buildIndex("userIdIndex", Vertex.class).addKey(userIdPropertyKey).unique().buildCompositeIndex();
 			}
 			
@@ -76,18 +77,18 @@ public class TitanCassandraEmbeddedConnection
 		
 		try
 		{
-			if(! this.titanGraph.getVertices("nodeId", "0").iterator().hasNext())
+			if(! this.titanGraph.getVertices(MandatoryProperties.nodeId.name(), "0").iterator().hasNext())
 			{
 				Vertex autoIncrement = this.titanGraph.addVertexWithLabel(NodeLabels.AutoIncrement.name());
-				autoIncrement.setProperty("nodeId", "0");
-				autoIncrement.setProperty("next", "2");
+				autoIncrement.setProperty(MandatoryProperties.nodeId.name(), "0");
+				autoIncrement.setProperty(MandatoryProperties.next.name(), "2");
 			}
 			
-			if(! this.titanGraph.getVertices("nodeId", "1").iterator().hasNext())
+			if(! this.titanGraph.getVertices(MandatoryProperties.nodeId.name(), "1").iterator().hasNext())
 			{
 				Vertex user = this.titanGraph.addVertexWithLabel(NodeLabels.User.name());
-				user.setProperty("nodeId", "1");
-				user.setProperty("userId", "public");
+				user.setProperty(MandatoryProperties.nodeId.name(), "1");
+				user.setProperty(MandatoryProperties.userId.name(), "public");
 			}
 			
 			titanTransaction.commit();

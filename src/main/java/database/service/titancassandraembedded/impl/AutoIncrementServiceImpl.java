@@ -8,6 +8,7 @@ import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.TitanTransaction;
 import com.tinkerpop.blueprints.Vertex;
 
+import database.MandatoryProperties;
 import database.connection.singleton.TitanCassandraEmbeddedConnection;
 import database.service.AutoIncrementService;
 
@@ -27,15 +28,15 @@ public class AutoIncrementServiceImpl implements AutoIncrementService
 		
 		try
 		{
-			Iterator<Vertex> iterator = this.titanGraph.getVertices("nodeId", "0").iterator();
+			Iterator<Vertex> iterator = this.titanGraph.getVertices(MandatoryProperties.nodeId.name(), "0").iterator();
 			Vertex autoIncrement = null;
 			while(iterator.hasNext())
 			{
 				autoIncrement = iterator.next();
 			}
 			
-			String nextIncrement = autoIncrement.getProperty("next");
-			autoIncrement.setProperty("next", AlphaNumericOperation.add(nextIncrement, 1));
+			String nextIncrement = autoIncrement.getProperty(MandatoryProperties.next.name());
+			autoIncrement.setProperty(MandatoryProperties.next.name(), AlphaNumericOperation.add(nextIncrement, 1));
 			
 			titanTransaction.commit();
 			return nextIncrement;

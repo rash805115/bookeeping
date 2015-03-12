@@ -10,6 +10,7 @@ import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
 
+import database.MandatoryProperties;
 import database.connection.singleton.TitanCassandraEmbeddedConnection;
 import database.service.FileService;
 import database.titan.NodeLabels;
@@ -59,9 +60,9 @@ public class FileServiceImpl implements FileService
 			catch(FileNotFound fileNotFound)
 			{
 				Vertex node = this.titanGraph.addVertexWithLabel(NodeLabels.File.name());
-				node.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
-				node.setProperty("filePath", filePath);
-				node.setProperty("fileName", fileName);
+				node.setProperty(MandatoryProperties.nodeId.name(), new AutoIncrementServiceImpl().getNextAutoIncrement());
+				node.setProperty(MandatoryProperties.filePath.name(), filePath);
+				node.setProperty(MandatoryProperties.fileName.name(), fileName);
 				node.setProperty("version", 0);
 				
 				for(Entry<String, Object> filePropertiesEntry : fileProperties.entrySet())

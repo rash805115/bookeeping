@@ -12,6 +12,7 @@ import org.neo4j.rest.graphdb.RestGraphDatabase;
 import org.neo4j.rest.graphdb.query.RestCypherQueryEngine;
 import org.neo4j.rest.graphdb.util.QueryResult;
 
+import database.MandatoryProperties;
 import database.neo4j.NodeLabels;
 import utilities.configurationproperties.DatabaseConnectionProperty;
 
@@ -38,8 +39,8 @@ public class Neo4JRestConnection
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
 			AutoIndexer<Node> autoIndexer = this.graphDatabaseService.index().getNodeAutoIndexer();
-			autoIndexer.startAutoIndexingProperty("nodeId");
-			autoIndexer.startAutoIndexingProperty("userId");
+			autoIndexer.startAutoIndexingProperty(MandatoryProperties.nodeId.name());
+			autoIndexer.startAutoIndexingProperty(MandatoryProperties.userId.name());
 			autoIndexer.setEnabled(true);
 			
 			transaction.success();
@@ -51,18 +52,18 @@ public class Neo4JRestConnection
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
 			ReadableIndex<Node> readableIndex = this.graphDatabaseService.index().getNodeAutoIndexer().getAutoIndex();
-			if(readableIndex.get("nodeId", "0").getSingle() == null)
+			if(readableIndex.get(MandatoryProperties.nodeId.name(), "0").getSingle() == null)
 			{
 				Node autoIncrement = this.graphDatabaseService.createNode(NodeLabels.AutoIncrement);
-				autoIncrement.setProperty("nodeId", "0");
-				autoIncrement.setProperty("next", "2");
+				autoIncrement.setProperty(MandatoryProperties.nodeId.name(), "0");
+				autoIncrement.setProperty(MandatoryProperties.next.name(), "2");
 			}
 			
-			if(readableIndex.get("nodeId", "1").getSingle() == null)
+			if(readableIndex.get(MandatoryProperties.nodeId.name(), "1").getSingle() == null)
 			{
 				Node user = this.graphDatabaseService.createNode(NodeLabels.User);
-				user.setProperty("nodeId", "1");
-				user.setProperty("userId", "public");
+				user.setProperty(MandatoryProperties.nodeId.name(), "1");
+				user.setProperty(MandatoryProperties.userId.name(), "public");
 			}
 			
 			transaction.success();

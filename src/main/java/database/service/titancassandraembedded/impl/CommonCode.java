@@ -10,6 +10,7 @@ import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
 
+import database.MandatoryProperties;
 import database.connection.singleton.TitanCassandraEmbeddedConnection;
 import database.titan.NodeLabels;
 import database.titan.RelationshipLabels;
@@ -30,7 +31,7 @@ public class CommonCode
 	
 	public Vertex getUser(String userId) throws UserNotFound
 	{
-		Iterator<Vertex> iterator = this.titanGraph.getVertices("userId", userId).iterator();
+		Iterator<Vertex> iterator = this.titanGraph.getVertices(MandatoryProperties.userId.name(), userId).iterator();
 		if(iterator.hasNext())
 		{
 			return iterator.next();
@@ -57,7 +58,7 @@ public class CommonCode
 		
 		for(Vertex vertex : iterable)
 		{
-			String retrievedFilesystemId = vertex.getProperty("filesystemId");
+			String retrievedFilesystemId = vertex.getProperty(MandatoryProperties.filesystemId.name());
 			if(retrievedFilesystemId.equals(filesystemId))
 			{
 				return vertex;
@@ -88,8 +89,8 @@ public class CommonCode
 		
 		for(Vertex vertex : iterable)
 		{
-			String retrievedDirectoryPath = vertex.getProperty("directoryPath");
-			String retrievedDirectoryName = vertex.getProperty("directoryName");
+			String retrievedDirectoryPath = vertex.getProperty(MandatoryProperties.directoryPath.name());
+			String retrievedDirectoryName = vertex.getProperty(MandatoryProperties.directoryName.name());
 			
 			if(retrievedDirectoryPath.equals(directoryPath) && retrievedDirectoryName.equals(directoryName))
 			{
@@ -127,8 +128,8 @@ public class CommonCode
 		
 		for(Vertex vertex : iterable)
 		{
-			String retrievedFilePath = vertex.getProperty("filePath");
-			String retrievedFileName = vertex.getProperty("fileName");
+			String retrievedFilePath = vertex.getProperty(MandatoryProperties.filePath.name());
+			String retrievedFileName = vertex.getProperty(MandatoryProperties.fileName.name());
 			
 			if(retrievedFilePath.equals(filePath) && retrievedFileName.equals(fileName))
 			{
@@ -205,12 +206,12 @@ public class CommonCode
 		Vertex copyNode = this.titanGraph.addVertexWithLabel(titanVertex.getLabel());
 		for(String key : node.getPropertyKeys())
 		{
-			if(! key.equals("nodeId"))
+			if(! key.equals(MandatoryProperties.nodeId.name()))
 			{
 				copyNode.setProperty(key, node.getProperty(key));
 			}
 		}
-		copyNode.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
+		copyNode.setProperty(MandatoryProperties.nodeId.name(), new AutoIncrementServiceImpl().getNextAutoIncrement());
 		
 		return copyNode;
 	}

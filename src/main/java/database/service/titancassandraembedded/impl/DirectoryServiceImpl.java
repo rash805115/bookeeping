@@ -10,6 +10,7 @@ import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
 
+import database.MandatoryProperties;
 import database.connection.singleton.TitanCassandraEmbeddedConnection;
 import database.service.DirectoryService;
 import database.titan.NodeLabels;
@@ -48,9 +49,9 @@ public class DirectoryServiceImpl implements DirectoryService
 			catch(DirectoryNotFound directoryNotFound)
 			{
 				Vertex node = this.titanGraph.addVertexWithLabel(NodeLabels.Directory.name());
-				node.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
-				node.setProperty("directoryPath", directoryPath);
-				node.setProperty("directoryName", directoryName);
+				node.setProperty(MandatoryProperties.nodeId.name(), new AutoIncrementServiceImpl().getNextAutoIncrement());
+				node.setProperty(MandatoryProperties.directoryPath.name(), directoryPath);
+				node.setProperty(MandatoryProperties.directoryName.name(), directoryName);
 				node.setProperty("version", 0);
 				
 				for(Entry<String, Object> directoryPropertiesEntry : directoryProperties.entrySet())

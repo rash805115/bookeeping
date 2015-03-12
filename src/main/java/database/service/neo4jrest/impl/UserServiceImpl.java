@@ -11,6 +11,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 
+import database.MandatoryProperties;
 import database.connection.singleton.Neo4JRestConnection;
 import database.neo4j.NodeLabels;
 import database.neo4j.querybuilder.CypherQueryBuilder;
@@ -43,8 +44,8 @@ public class UserServiceImpl implements UserService
 			catch(UserNotFound userNotFound)
 			{
 				Node node = this.graphDatabaseService.createNode(NodeLabels.User);
-				node.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
-				node.setProperty("userId", userId);
+				node.setProperty(MandatoryProperties.nodeId.name(), new AutoIncrementServiceImpl().getNextAutoIncrement());
+				node.setProperty(MandatoryProperties.userId.name(), userId);
 				
 				for(Entry<String, Object> userPropertiesEntry : userProperties.entrySet())
 				{

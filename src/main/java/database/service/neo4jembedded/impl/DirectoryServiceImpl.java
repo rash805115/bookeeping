@@ -10,6 +10,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 
+import database.MandatoryProperties;
 import database.connection.singleton.Neo4JEmbeddedConnection;
 import database.neo4j.NodeLabels;
 import database.neo4j.RelationshipLabels;
@@ -48,9 +49,9 @@ public class DirectoryServiceImpl implements DirectoryService
 			catch(DirectoryNotFound directoryNotFound)
 			{
 				Node node = this.graphDatabaseService.createNode(NodeLabels.Directory);
-				node.setProperty("nodeId", new AutoIncrementServiceImpl().getNextAutoIncrement());
-				node.setProperty("directoryPath", directoryPath);
-				node.setProperty("directoryName", directoryName);
+				node.setProperty(MandatoryProperties.nodeId.name(), new AutoIncrementServiceImpl().getNextAutoIncrement());
+				node.setProperty(MandatoryProperties.directoryPath.name(), directoryPath);
+				node.setProperty(MandatoryProperties.directoryName.name(), directoryName);
 				node.setProperty("version", 0);
 				
 				for(Entry<String, Object> directoryPropertiesEntry : directoryProperties.entrySet())

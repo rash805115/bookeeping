@@ -152,7 +152,7 @@ public class FilesystemServiceImpl implements FilesystemService
 		
 		try
 		{
-			Vertex filesystem = new CommonCode().getFilesystem(userId, filesystemId, false);
+			Vertex filesystem = new CommonCode().getFilesystem(userId, filesystemId, true);
 			Edge hadRelationship = filesystem.getEdges(Direction.IN, RelationshipLabels.had.name()).iterator().next();
 			Vertex parentDirectory = hadRelationship.getVertex(Direction.OUT);
 			

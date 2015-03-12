@@ -14,7 +14,6 @@ import database.connection.singleton.Neo4JRestConnection;
 import database.neo4j.NodeLabels;
 import database.neo4j.RelationshipLabels;
 import database.service.FilesystemService;
-import database.service.neo4jembedded.impl.CommonCode;
 import exception.DirectoryNotFound;
 import exception.DuplicateFilesystem;
 import exception.FileNotFound;

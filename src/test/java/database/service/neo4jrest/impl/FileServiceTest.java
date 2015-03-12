@@ -112,5 +112,6 @@ public class FileServiceTest
 		
 		this.filesystemService.createNewVersion(userId, filesystemId, changeMetadata, new HashMap<String, Object>());
 		this.filesystemService.deleteFilesystemTemporarily(userId, filesystemId);
+		this.filesystemService.restoreTemporaryDeletedFilesystem(userId, filesystemId);
 	}
 }

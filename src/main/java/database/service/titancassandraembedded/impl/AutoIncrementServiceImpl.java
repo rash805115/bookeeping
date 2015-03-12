@@ -10,7 +10,6 @@ import com.tinkerpop.blueprints.Vertex;
 
 import database.connection.singleton.TitanCassandraEmbeddedConnection;
 import database.service.AutoIncrementService;
-import database.titan.NodeLabels;
 
 public class AutoIncrementServiceImpl implements AutoIncrementService
 {
@@ -35,23 +34,11 @@ public class AutoIncrementServiceImpl implements AutoIncrementService
 				autoIncrement = iterator.next();
 			}
 			
-			if(autoIncrement == null)
-			{
-				Vertex vertex = this.titanGraph.addVertexWithLabel(NodeLabels.AutoIncrement.name());
-				vertex.setProperty("nodeId", "0");
-				vertex.setProperty("next", "2");
-				
-				titanTransaction.commit();
-				return "1";
-			}
-			else
-			{
-				String nextIncrement = autoIncrement.getProperty("next");
-				autoIncrement.setProperty("next", AlphaNumericOperation.add(nextIncrement, 1));
-				
-				titanTransaction.commit();
-				return nextIncrement;
-			}
+			String nextIncrement = autoIncrement.getProperty("next");
+			autoIncrement.setProperty("next", AlphaNumericOperation.add(nextIncrement, 1));
+			
+			titanTransaction.commit();
+			return nextIncrement;
 		}
 		finally
 		{

@@ -7,6 +7,7 @@ import utilities.configurationproperties.DatabaseConnectionProperty;
 import com.thinkaurelius.titan.core.PropertyKey;
 import com.thinkaurelius.titan.core.TitanFactory;
 import com.thinkaurelius.titan.core.TitanGraph;
+import com.thinkaurelius.titan.core.TitanTransaction;
 import com.thinkaurelius.titan.core.schema.TitanManagement;
 import com.tinkerpop.blueprints.Vertex;
 
@@ -29,6 +30,7 @@ public class TitanCassandraEmbeddedConnection
 		
 		this.titanGraph = TitanFactory.open(baseConfiguration);
 		this.setupGraph();
+		this.setupPreRequisites();
 	}
 	
 	private void setupGraph()
@@ -64,6 +66,37 @@ public class TitanCassandraEmbeddedConnection
 			if(titanManagement.isOpen())
 			{
 				titanManagement.rollback();
+			}
+		}
+	}
+	
+	private void setupPreRequisites()
+	{
+		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
+		
+		try
+		{
+			if(! this.titanGraph.getVertices("nodeId", "0").iterator().hasNext())
+			{
+				Vertex autoIncrement = this.titanGraph.addVertexWithLabel(NodeLabels.AutoIncrement.name());
+				autoIncrement.setProperty("nodeId", "0");
+				autoIncrement.setProperty("next", "2");
+			}
+			
+			if(! this.titanGraph.getVertices("nodeId", "1").iterator().hasNext())
+			{
+				Vertex user = this.titanGraph.addVertexWithLabel(NodeLabels.User.name());
+				user.setProperty("nodeId", "1");
+				user.setProperty("userId", "public");
+			}
+			
+			titanTransaction.commit();
+		}
+		finally
+		{
+			if(titanTransaction.isOpen())
+			{
+				titanTransaction.rollback();
 			}
 		}
 	}

@@ -7,10 +7,12 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.index.AutoIndexer;
+import org.neo4j.graphdb.index.ReadableIndex;
 import org.neo4j.rest.graphdb.RestGraphDatabase;
 import org.neo4j.rest.graphdb.query.RestCypherQueryEngine;
 import org.neo4j.rest.graphdb.util.QueryResult;
 
+import database.neo4j.NodeLabels;
 import utilities.configurationproperties.DatabaseConnectionProperty;
 
 public class Neo4JRestConnection
@@ -28,6 +30,7 @@ public class Neo4JRestConnection
 		this.graphDatabaseService = restGraphDatabase;
 		this.restCypherQueryEngine = new RestCypherQueryEngine(restGraphDatabase.getRestAPI());
 		this.setupGraph();
+		this.setupPreRequisites();
 	}
 	
 	private void setupGraph()
@@ -38,6 +41,29 @@ public class Neo4JRestConnection
 			autoIndexer.startAutoIndexingProperty("nodeId");
 			autoIndexer.startAutoIndexingProperty("userId");
 			autoIndexer.setEnabled(true);
+			
+			transaction.success();
+		}
+	}
+	
+	private void setupPreRequisites()
+	{
+		try(Transaction transaction = this.graphDatabaseService.beginTx())
+		{
+			ReadableIndex<Node> readableIndex = this.graphDatabaseService.index().getNodeAutoIndexer().getAutoIndex();
+			if(readableIndex.get("nodeId", "0").getSingle() == null)
+			{
+				Node autoIncrement = this.graphDatabaseService.createNode(NodeLabels.AutoIncrement);
+				autoIncrement.setProperty("nodeId", "0");
+				autoIncrement.setProperty("next", "2");
+			}
+			
+			if(readableIndex.get("nodeId", "1").getSingle() == null)
+			{
+				Node user = this.graphDatabaseService.createNode(NodeLabels.User);
+				user.setProperty("nodeId", "1");
+				user.setProperty("userId", "public");
+			}
 			
 			transaction.success();
 		}

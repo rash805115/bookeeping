@@ -139,6 +139,44 @@ public class DirectoryServiceImpl implements DirectoryService
 			}
 		}
 	}
+	
+	@Override
+	public void restoreTemporaryDeletedDirectory(String userId, String filesystemId, String directoryPath, String directoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateDirectory
+	{
+		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
+		
+		try
+		{
+			CommonCode commonCode = new CommonCode();
+			try
+			{
+				commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, false);
+				throw new DuplicateDirectory("ERROR: Directory already present! - \"" + directoryPath + "/" + directoryName + "\"");
+			}
+			catch(DirectoryNotFound directoryNotFound)
+			{
+				Vertex directory = commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, true);
+				Edge hadRelationship = directory.getEdges(Direction.IN, RelationshipLabels.had.name()).iterator().next();
+				Vertex parentDirectory = hadRelationship.getVertex(Direction.OUT);
+				
+				Edge hasRelationship = parentDirectory.addEdge(RelationshipLabels.has.name(), directory);
+				for(String key : hadRelationship.getPropertyKeys())
+				{
+					hasRelationship.setProperty(key, hadRelationship.getProperty(key));
+				}
+				
+				hadRelationship.remove();
+				titanTransaction.commit();
+			}
+		}
+		finally
+		{
+			if(titanTransaction.isOpen())
+			{
+				titanTransaction.rollback();
+			}
+		}
+	}
 
 	@Override
 	public Map<String, Object> getDirectory(String userId, String filesystemId, String directoryPath, String directoryName, int version) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, VersionNotFound

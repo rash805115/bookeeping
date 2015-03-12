@@ -116,6 +116,35 @@ public class DirectoryServiceImpl implements DirectoryService
 	}
 	
 	@Override
+	public void restoreTemporaryDeletedDirectory(String userId, String filesystemId, String directoryPath, String directoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateDirectory
+	{
+		try(Transaction transaction = this.graphDatabaseService.beginTx())
+		{
+			CommonCode commonCode = new CommonCode();
+			try
+			{
+				commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, false);
+				throw new DuplicateDirectory("ERROR: Directory already present! - \"" + directoryPath + "/" + directoryName + "\"");
+			}
+			catch(DirectoryNotFound directoryNotFound)
+			{
+				Node directory = commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, true);
+				Relationship hadRelationship = directory.getSingleRelationship(RelationshipLabels.had, Direction.INCOMING);
+				Node parentDirectory = hadRelationship.getStartNode();
+				
+				Relationship hasRelationship = parentDirectory.createRelationshipTo(directory, RelationshipLabels.has);
+				for(String key : hadRelationship.getPropertyKeys())
+				{
+					hasRelationship.setProperty(key, hadRelationship.getProperty(key));
+				}
+				
+				hadRelationship.delete();
+				transaction.success();
+			}
+		}
+	}
+	
+	@Override
 	public Map<String, Object> getDirectory(String userId, String filesystemId, String directoryPath, String directoryName, int version) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, VersionNotFound
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())

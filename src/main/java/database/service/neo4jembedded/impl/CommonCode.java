@@ -49,7 +49,6 @@ public class CommonCode
 	{
 		Node user  = this.getUser(userId);
 		Iterable<Relationship> iterable;
-		
 		if(deleted)
 		{
 			iterable = user.getRelationships(Direction.OUTGOING, RelationshipLabels.had);
@@ -79,10 +78,19 @@ public class CommonCode
 		return filesystem.getSingleRelationship(RelationshipLabels.has, Direction.OUTGOING).getEndNode();
 	}
 	
-	public Node getDirectory(String userId, String filesystemId, String directoryPath, String directoryName) throws FilesystemNotFound, UserNotFound, DirectoryNotFound
+	public Node getDirectory(String userId, String filesystemId, String directoryPath, String directoryName, boolean deleted) throws FilesystemNotFound, UserNotFound, DirectoryNotFound
 	{
 		Node rootDirectory = this.getRootDirectory(userId, filesystemId);
-		Iterable<Relationship> iterable = rootDirectory.getRelationships(Direction.OUTGOING, RelationshipLabels.has);
+		Iterable<Relationship> iterable;
+		if(deleted)
+		{
+			iterable = rootDirectory.getRelationships(Direction.OUTGOING, RelationshipLabels.had);
+		}
+		else
+		{
+			iterable = rootDirectory.getRelationships(Direction.OUTGOING, RelationshipLabels.has);
+		}
+		
 		for(Relationship relationship : iterable)
 		{
 			Node node = relationship.getEndNode();
@@ -101,7 +109,7 @@ public class CommonCode
 		throw new DirectoryNotFound("ERROR: Directory not found! - \"" + directoryPath + "/" + directoryName + "\"");
 	}
 	
-	public Node getFile(String userId, String filesystemId, String filePath, String fileName) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, FileNotFound
+	public Node getFile(String userId, String filesystemId, String filePath, String fileName, boolean deleted) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, FileNotFound
 	{
 		Node parentDirectory = null;
 		if(filePath.equals("/"))
@@ -113,10 +121,19 @@ public class CommonCode
 			String directoryName = filePath.substring(filePath.lastIndexOf("/") + 1, filePath.length());
 			String directoryPath = filePath.substring(0, filePath.lastIndexOf("/" + directoryName));
 			directoryPath = directoryPath.length() == 0 ? "/" : directoryPath;
-			parentDirectory = this.getDirectory(userId, filesystemId, directoryPath, directoryName);
+			parentDirectory = this.getDirectory(userId, filesystemId, directoryPath, directoryName, false);
 		}
 		
-		Iterable<Relationship> iterable = parentDirectory.getRelationships(Direction.OUTGOING, RelationshipLabels.has);
+		Iterable<Relationship> iterable;
+		if(deleted)
+		{
+			iterable = parentDirectory.getRelationships(Direction.OUTGOING, RelationshipLabels.had);
+		}
+		else
+		{
+			iterable = parentDirectory.getRelationships(Direction.OUTGOING, RelationshipLabels.has);
+		}
+		
 		for(Relationship relationship : iterable)
 		{
 			Node node = relationship.getEndNode();
@@ -135,20 +152,20 @@ public class CommonCode
 		throw new FileNotFound("ERROR: File not found! - \"" + filePath + "/" + fileName + "\"");
 	}
 	
-	public Node getVersion(String nodeType, String userId, String filesystemId, String path, String name, int version) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
+	public Node getVersion(String nodeType, String userId, String filesystemId, String path, String name, int version, boolean deleted) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
 	{
 		Node node = null;
 		if(nodeType.equalsIgnoreCase("filesystem"))
 		{
-			node = this.getFilesystem(userId, filesystemId, false);
+			node = this.getFilesystem(userId, filesystemId, deleted);
 		}
 		else if(nodeType.equalsIgnoreCase("directory"))
 		{
-			node = this.getDirectory(userId, filesystemId, path, name);
+			node = this.getDirectory(userId, filesystemId, path, name, deleted);
 		}
 		else
 		{
-			node = this.getFile(userId, filesystemId, path, name);
+			node = this.getFile(userId, filesystemId, path, name, deleted);
 		}
 		
 		do

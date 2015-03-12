@@ -78,7 +78,7 @@ public class FilesystemServiceImpl implements FilesystemService
 			Node filesystem = null;
 			try
 			{
-				filesystem = commonCode.getVersion("filesystem", userId, filesystemId, null, null, -1);
+				filesystem = commonCode.getVersion("filesystem", userId, filesystemId, null, null, -1, false);
 			}
 			catch (VersionNotFound | FileNotFound | DirectoryNotFound e) {}
 			Node versionedFilesystem = commonCode.copyNodeTree(filesystem);
@@ -121,22 +121,31 @@ public class FilesystemServiceImpl implements FilesystemService
 	}
 	
 	@Override
-	public void restoreTemporaryDeletedFilesystem(String userId, String filesystemId) throws UserNotFound, FilesystemNotFound
+	public void restoreTemporaryDeletedFilesystem(String userId, String filesystemId) throws UserNotFound, FilesystemNotFound, DuplicateFilesystem
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			Node filesystem = new CommonCode().getFilesystem(userId, filesystemId, true);
-			Relationship hadRelationship = filesystem.getSingleRelationship(RelationshipLabels.had, Direction.INCOMING);
-			Node parentDirectory = hadRelationship.getStartNode();
-			
-			Relationship hasRelationship = parentDirectory.createRelationshipTo(filesystem, RelationshipLabels.has);
-			for(String key : hadRelationship.getPropertyKeys())
+			CommonCode commonCode = new CommonCode();
+			try
 			{
-				hasRelationship.setProperty(key, hadRelationship.getProperty(key));
+				commonCode.getFilesystem(userId, filesystemId, false);
+				throw new DuplicateFilesystem("ERROR: Filesystem already present! - \"" + filesystemId + "\"");
 			}
-			
-			hadRelationship.delete();
-			transaction.success();
+			catch(FilesystemNotFound filesystemNotFound)
+			{
+				Node filesystem = commonCode.getFilesystem(userId, filesystemId, true);
+				Relationship hadRelationship = filesystem.getSingleRelationship(RelationshipLabels.had, Direction.INCOMING);
+				Node parentDirectory = hadRelationship.getStartNode();
+				
+				Relationship hasRelationship = parentDirectory.createRelationshipTo(filesystem, RelationshipLabels.has);
+				for(String key : hadRelationship.getPropertyKeys())
+				{
+					hasRelationship.setProperty(key, hadRelationship.getProperty(key));
+				}
+				
+				hadRelationship.delete();
+				transaction.success();
+			}
 		}
 	}
 
@@ -148,7 +157,7 @@ public class FilesystemServiceImpl implements FilesystemService
 			Node filesystem = null;
 			try
 			{
-				filesystem = new CommonCode().getVersion("filesystem", userId, filesystemId, null, null, version);
+				filesystem = new CommonCode().getVersion("filesystem", userId, filesystemId, null, null, version, false);
 			}
 			catch (FileNotFound | DirectoryNotFound e) {}
 			Map<String, Object> filesystemProperties = new HashMap<String, Object>();

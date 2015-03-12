@@ -42,7 +42,7 @@ public class DirectoryServiceImpl implements DirectoryService
 			{
 				CommonCode commonCode = new CommonCode();
 				rootDirectory = commonCode.getRootDirectory(userId, filesystemId);
-				commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName);
+				commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, false);
 				throw new DuplicateDirectory("ERROR: Directory already present! - \"" + directoryPath + "/" + directoryName + "\"");
 			}
 			catch(DirectoryNotFound directoryNotFound)
@@ -82,7 +82,7 @@ public class DirectoryServiceImpl implements DirectoryService
 			Vertex directory = null;
 			try
 			{
-				directory = commonCode.getVersion("directory", userId, filesystemId, directoryPath, directoryName, -1);
+				directory = commonCode.getVersion("directory", userId, filesystemId, directoryPath, directoryName, -1, false);
 			}
 			catch (VersionNotFound | FileNotFound e) {}
 			Vertex versionedDirectory = commonCode.copyNode(directory);
@@ -118,7 +118,7 @@ public class DirectoryServiceImpl implements DirectoryService
 		
 		try
 		{
-			Vertex directory = new CommonCode().getDirectory(userId, filesystemId, directoryPath, directoryName);
+			Vertex directory = new CommonCode().getDirectory(userId, filesystemId, directoryPath, directoryName, false);
 			Edge hasRelationship = directory.getEdges(Direction.IN, RelationshipLabels.has.name()).iterator().next();
 			Vertex parentDirectory = hasRelationship.getVertex(Direction.OUT);
 			
@@ -150,7 +150,7 @@ public class DirectoryServiceImpl implements DirectoryService
 			Vertex directory = null;
 			try
 			{
-				directory = new CommonCode().getVersion("directory", userId, filesystemId, directoryPath, directoryName, version);
+				directory = new CommonCode().getVersion("directory", userId, filesystemId, directoryPath, directoryName, version, false);
 			}
 			catch (FileNotFound e) {}
 			Map<String, Object> directoryProperties = new HashMap<String, Object>();

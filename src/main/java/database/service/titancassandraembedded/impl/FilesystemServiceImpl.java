@@ -87,7 +87,7 @@ public class FilesystemServiceImpl implements FilesystemService
 			Vertex filesystem = null;
 			try
 			{
-				filesystem = commonCode.getVersion("filesystem", userId, filesystemId, null, null, -1);
+				filesystem = commonCode.getVersion("filesystem", userId, filesystemId, null, null, -1, false);
 			}
 			catch (VersionNotFound | FileNotFound | DirectoryNotFound e) {}
 			Vertex versionedFilesystem = commonCode.copyNodeTree(filesystem);
@@ -146,24 +146,33 @@ public class FilesystemServiceImpl implements FilesystemService
 	}
 	
 	@Override
-	public void restoreTemporaryDeletedFilesystem(String userId, String filesystemId) throws UserNotFound, FilesystemNotFound
+	public void restoreTemporaryDeletedFilesystem(String userId, String filesystemId) throws UserNotFound, FilesystemNotFound, DuplicateFilesystem
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
 		
 		try
 		{
-			Vertex filesystem = new CommonCode().getFilesystem(userId, filesystemId, true);
-			Edge hadRelationship = filesystem.getEdges(Direction.IN, RelationshipLabels.had.name()).iterator().next();
-			Vertex parentDirectory = hadRelationship.getVertex(Direction.OUT);
-			
-			Edge hasRelationship = parentDirectory.addEdge(RelationshipLabels.has.name(), filesystem);
-			for(String key : hadRelationship.getPropertyKeys())
+			CommonCode commonCode = new CommonCode();
+			try
 			{
-				hasRelationship.setProperty(key, hadRelationship.getProperty(key));
+				commonCode.getFilesystem(userId, filesystemId, false);
+				throw new DuplicateFilesystem("ERROR: Filesystem already present! - \"" + filesystemId + "\"");
 			}
-			
-			hadRelationship.remove();
-			titanTransaction.commit();
+			catch(FilesystemNotFound filesystemNotFound)
+			{
+				Vertex filesystem = commonCode.getFilesystem(userId, filesystemId, true);
+				Edge hadRelationship = filesystem.getEdges(Direction.IN, RelationshipLabels.had.name()).iterator().next();
+				Vertex parentDirectory = hadRelationship.getVertex(Direction.OUT);
+				
+				Edge hasRelationship = parentDirectory.addEdge(RelationshipLabels.has.name(), filesystem);
+				for(String key : hadRelationship.getPropertyKeys())
+				{
+					hasRelationship.setProperty(key, hadRelationship.getProperty(key));
+				}
+				
+				hadRelationship.remove();
+				titanTransaction.commit();
+			}
 		}
 		finally
 		{
@@ -184,7 +193,7 @@ public class FilesystemServiceImpl implements FilesystemService
 			Vertex filesystem = null;
 			try
 			{
-				filesystem = new CommonCode().getVersion("filesystem", userId, filesystemId, null, null, version);
+				filesystem = new CommonCode().getVersion("filesystem", userId, filesystemId, null, null, version, false);
 			}
 			catch (FileNotFound | DirectoryNotFound e) {}
 			Map<String, Object> filesystemProperties = new HashMap<String, Object>();

@@ -50,10 +50,10 @@ public class FileServiceImpl implements FileService
 					String directoryName = filePath.substring(filePath.lastIndexOf("/") + 1, filePath.length());
 					String directoryPath = filePath.substring(0, filePath.lastIndexOf("/" + directoryName));
 					directoryPath = directoryPath.length() == 0 ? "/" : directoryPath;
-					parentDirectory = commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName);
+					parentDirectory = commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, false);
 				}
 				
-				commonCode.getFile(userId, filesystemId, filePath, fileName);
+				commonCode.getFile(userId, filesystemId, filePath, fileName, false);
 				throw new DuplicateFile("ERROR: File already present! - \"" + filePath + "/" + fileName + "\"");
 			}
 			catch(FileNotFound fileNotFound)
@@ -93,7 +93,7 @@ public class FileServiceImpl implements FileService
 			Vertex file = null;
 			try
 			{
-				file = commonCode.getVersion("file", userId, filesystemId, filePath, fileName, -1);
+				file = commonCode.getVersion("file", userId, filesystemId, filePath, fileName, -1, false);
 			}
 			catch (VersionNotFound e) {}
 			Vertex versionedFile = commonCode.copyNode(file);
@@ -129,7 +129,7 @@ public class FileServiceImpl implements FileService
 		
 		try
 		{
-			Vertex file = new CommonCode().getFile(userId, filesystemId, filePath, fileName);
+			Vertex file = new CommonCode().getFile(userId, filesystemId, filePath, fileName, false);
 			Edge hasRelationship = file.getEdges(Direction.IN, RelationshipLabels.has.name()).iterator().next();
 			Vertex parentDirectory = hasRelationship.getVertex(Direction.OUT);
 			
@@ -158,7 +158,7 @@ public class FileServiceImpl implements FileService
 		
 		try
 		{
-			Vertex file = new CommonCode().getVersion("file", userId, filesystemId, filePath, fileName, version);
+			Vertex file = new CommonCode().getVersion("file", userId, filesystemId, filePath, fileName, version, false);
 			Map<String, Object> fileProperties = new HashMap<String, Object>();
 			
 			Iterable<String> keys = file.getPropertyKeys();

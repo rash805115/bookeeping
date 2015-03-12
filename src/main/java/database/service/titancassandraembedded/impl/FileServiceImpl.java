@@ -150,6 +150,44 @@ public class FileServiceImpl implements FileService
 			}
 		}
 	}
+	
+	@Override
+	public void restoreTemporaryDeletedFile(String userId, String filesystemId, String filePath, String fileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, DuplicateFile
+	{
+		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
+		
+		try
+		{
+			CommonCode commonCode = new CommonCode();
+			try
+			{
+				commonCode.getFile(userId, filesystemId, filePath, fileName, false);
+				throw new DuplicateFile("ERROR: File already present! - \"" + filePath + "/" + fileName + "\"");
+			}
+			catch(FileNotFound fileNotFound)
+			{
+				Vertex file = commonCode.getFile(userId, filesystemId, filePath, fileName, true);
+				Edge hadRelationship = file.getEdges(Direction.IN, RelationshipLabels.had.name()).iterator().next();
+				Vertex parentDirectory = hadRelationship.getVertex(Direction.OUT);
+				
+				Edge hasRelationship = parentDirectory.addEdge(RelationshipLabels.has.name(), file);
+				for(String key : hadRelationship.getPropertyKeys())
+				{
+					hasRelationship.setProperty(key, hadRelationship.getProperty(key));
+				}
+				
+				hadRelationship.remove();
+				titanTransaction.commit();
+			}
+		}
+		finally
+		{
+			if(titanTransaction.isOpen())
+			{
+				titanTransaction.rollback();
+			}
+		}
+	}
 
 	@Override
 	public Map<String, Object> getFile(String userId, String filesystemId, String filePath, String fileName, int version) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound

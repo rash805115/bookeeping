@@ -125,6 +125,35 @@ public class FileServiceImpl implements FileService
 			transaction.success();
 		}
 	}
+	
+	@Override
+	public void restoreTemporaryDeletedFile(String userId, String filesystemId, String filePath, String fileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, DuplicateFile
+	{
+		try(Transaction transaction = this.graphDatabaseService.beginTx())
+		{
+			CommonCode commonCode = new CommonCode();
+			try
+			{
+				commonCode.getFile(userId, filesystemId, filePath, fileName, false);
+				throw new DuplicateFile("ERROR: File already present! - \"" + filePath + "/" + fileName + "\"");
+			}
+			catch(FileNotFound fileNotFound)
+			{
+				Node file = commonCode.getFile(userId, filesystemId, filePath, fileName, true);
+				Relationship hadRelationship = file.getSingleRelationship(RelationshipLabels.had, Direction.INCOMING);
+				Node parentDirectory = hadRelationship.getStartNode();
+				
+				Relationship hasRelationship = parentDirectory.createRelationshipTo(file, RelationshipLabels.has);
+				for(String key : hadRelationship.getPropertyKeys())
+				{
+					hasRelationship.setProperty(key, hadRelationship.getProperty(key));
+				}
+				
+				hadRelationship.delete();
+				transaction.success();
+			}
+		}
+	}
 
 	@Override
 	public Map<String, Object> getFile(String userId, String filesystemId, String filePath, String fileName, int version) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound

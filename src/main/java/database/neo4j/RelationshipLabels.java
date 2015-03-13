@@ -4,5 +4,5 @@ import org.neo4j.graphdb.RelationshipType;
 
 public enum RelationshipLabels implements RelationshipType
 {
-	has, hasVersion, had
+	has, hasVersion, had, commit
 }

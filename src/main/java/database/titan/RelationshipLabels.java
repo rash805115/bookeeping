@@ -2,5 +2,5 @@ package database.titan;
 
 public enum RelationshipLabels
 {
-	has, hasVersion, had
+	has, hasVersion, had, commit
 }

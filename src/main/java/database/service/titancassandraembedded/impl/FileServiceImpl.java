@@ -63,7 +63,7 @@ public class FileServiceImpl implements FileService
 				node.setProperty(MandatoryProperties.nodeId.name(), new AutoIncrementServiceImpl().getNextAutoIncrement());
 				node.setProperty(MandatoryProperties.filePath.name(), filePath);
 				node.setProperty(MandatoryProperties.fileName.name(), fileName);
-				node.setProperty("version", 0);
+				node.setProperty(MandatoryProperties.version.name(), 0);
 				
 				for(Entry<String, Object> filePropertiesEntry : fileProperties.entrySet())
 				{
@@ -99,8 +99,8 @@ public class FileServiceImpl implements FileService
 			catch (VersionNotFound e) {}
 			Vertex versionedFile = commonCode.copyNode(file);
 			
-			int fileLatestVersion = (int) file.getProperty("version");
-			versionedFile.setProperty("version", fileLatestVersion + 1);
+			int fileLatestVersion = (int) file.getProperty(MandatoryProperties.version.name());
+			versionedFile.setProperty(MandatoryProperties.version.name(), fileLatestVersion + 1);
 			for(Entry<String, Object> entry : changedProperties.entrySet())
 			{
 				versionedFile.setProperty(entry.getKey(), entry.getValue());

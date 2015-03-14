@@ -53,7 +53,7 @@ public class FilesystemServiceImpl implements FilesystemService
 				Vertex node = this.titanGraph.addVertexWithLabel(NodeLabels.Filesystem.name());
 				node.setProperty(MandatoryProperties.nodeId.name(), autoIncrementServiceImpl.getNextAutoIncrement());
 				node.setProperty(MandatoryProperties.filesystemId.name(), filesystemId);
-				node.setProperty("version", 0);
+				node.setProperty(MandatoryProperties.version.name(), 0);
 				
 				for(Entry<String, Object> filesystemPropertiesEntry : filesystemProperties.entrySet())
 				{
@@ -93,8 +93,8 @@ public class FilesystemServiceImpl implements FilesystemService
 			catch (VersionNotFound | FileNotFound | DirectoryNotFound e) {}
 			Vertex versionedFilesystem = commonCode.copyNodeTree(filesystem);
 			
-			int filesystemLatestVersion = (int) filesystem.getProperty("version");
-			versionedFilesystem.setProperty("version", filesystemLatestVersion + 1);
+			int filesystemLatestVersion = (int) filesystem.getProperty(MandatoryProperties.version.name());
+			versionedFilesystem.setProperty(MandatoryProperties.version.name(), filesystemLatestVersion + 1);
 			for(Entry<String, Object> entry : changedProperties.entrySet())
 			{
 				versionedFilesystem.setProperty(entry.getKey(), entry.getValue());

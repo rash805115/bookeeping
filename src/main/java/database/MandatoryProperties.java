@@ -2,5 +2,5 @@ package database;
 
 public enum MandatoryProperties
 {
-	nodeId, next, userId, filesystemId, directoryPath, directoryName, filePath, fileName, commitId
+	nodeId, next, userId, filesystemId, directoryPath, directoryName, filePath, fileName, version
 }

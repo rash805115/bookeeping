@@ -52,7 +52,7 @@ public class DirectoryServiceImpl implements DirectoryService
 				node.setProperty(MandatoryProperties.nodeId.name(), new AutoIncrementServiceImpl().getNextAutoIncrement());
 				node.setProperty(MandatoryProperties.directoryPath.name(), directoryPath);
 				node.setProperty(MandatoryProperties.directoryName.name(), directoryName);
-				node.setProperty("version", 0);
+				node.setProperty(MandatoryProperties.version.name(), 0);
 				
 				for(Entry<String, Object> directoryPropertiesEntry : directoryProperties.entrySet())
 				{
@@ -88,8 +88,8 @@ public class DirectoryServiceImpl implements DirectoryService
 			catch (VersionNotFound | FileNotFound e) {}
 			Vertex versionedDirectory = commonCode.copyNode(directory);
 			
-			int directoryLatestVersion = (int) directory.getProperty("version");
-			versionedDirectory.setProperty("version", directoryLatestVersion + 1);
+			int directoryLatestVersion = (int) directory.getProperty(MandatoryProperties.version.name());
+			versionedDirectory.setProperty(MandatoryProperties.version.name(), directoryLatestVersion + 1);
 			for(Entry<String, Object> entry : changedProperties.entrySet())
 			{
 				versionedDirectory.setProperty(entry.getKey(), entry.getValue());

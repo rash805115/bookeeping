@@ -160,7 +160,7 @@ public class CommonCode
 		{
 			if(version != -1)
 			{
-				int retrievedVersion = (int) node.getProperty("version");
+				int retrievedVersion = (int) node.getProperty(MandatoryProperties.version.name());
 				if(retrievedVersion == version)
 				{
 					return node;

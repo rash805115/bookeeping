@@ -189,6 +189,37 @@ public class FileServiceImpl implements FileService
 			}
 		}
 	}
+	
+	@Override
+	public void moveFile(String userId, String filesystemId, String oldFilePath, String oldFileName, String newFilePath, String newFileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, DuplicateFile
+	{
+		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
+		
+		try
+		{
+			Map<String, Object> fileProperties = null;
+			try
+			{
+				fileProperties = this.getFile(userId, filesystemId, oldFilePath, oldFileName, -1);
+				fileProperties.remove(MandatoryProperties.nodeId.name());
+				fileProperties.remove(MandatoryProperties.filePath.name());
+				fileProperties.remove(MandatoryProperties.fileName.name());
+				fileProperties.remove(MandatoryProperties.version.name());
+			}
+			catch (VersionNotFound e) {}
+			
+			this.deleteFileTemporarily(userId, filesystemId, oldFilePath, oldFileName);
+			this.createNewFile(newFilePath, newFileName, filesystemId, userId, fileProperties);
+			titanTransaction.commit();
+		}
+		finally
+		{
+			if(titanTransaction.isOpen())
+			{
+				titanTransaction.rollback();
+			}
+		}
+	}
 
 	@Override
 	public Map<String, Object> getFile(String userId, String filesystemId, String filePath, String fileName, int version) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound

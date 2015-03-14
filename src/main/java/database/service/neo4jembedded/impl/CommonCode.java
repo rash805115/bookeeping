@@ -107,7 +107,7 @@ public class CommonCode
 			}
 		}
 		
-		throw new DirectoryNotFound("ERROR: Directory not found! - \"" + directoryPath + "/" + directoryName + "\"");
+		throw new DirectoryNotFound("ERROR: Directory not found! - \"" + (directoryPath.equals("/") ? "" : directoryPath) + "/" + directoryName + "\"");
 	}
 	
 	public Node getFile(String userId, String filesystemId, String filePath, String fileName, boolean deleted) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, FileNotFound
@@ -150,7 +150,7 @@ public class CommonCode
 			}
 		}
 		
-		throw new FileNotFound("ERROR: File not found! - \"" + filePath + "/" + fileName + "\"");
+		throw new FileNotFound("ERROR: File not found! - \"" + (filePath.equals("/") ? "" : filePath) + "/" + fileName + "\"");
 	}
 	
 	public Node getVersion(String nodeType, String userId, String filesystemId, String path, String name, int version, boolean deleted) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, FileNotFound, VersionNotFound

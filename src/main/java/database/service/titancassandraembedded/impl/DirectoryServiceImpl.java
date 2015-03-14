@@ -178,6 +178,64 @@ public class DirectoryServiceImpl implements DirectoryService
 			}
 		}
 	}
+	
+	@Override
+	public void moveDirectory(String userId, String filesystemId, String oldDirectoryPath, String oldDirectoryName, String newDirectoryPath, String newDirectoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateDirectory
+	{
+		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
+		
+		try
+		{
+			Map<String, Object> directoryProperties = null;
+			try
+			{
+				directoryProperties = this.getDirectory(userId, filesystemId, oldDirectoryPath, oldDirectoryName, -1);
+				directoryProperties.remove(MandatoryProperties.nodeId.name());
+				directoryProperties.remove(MandatoryProperties.directoryPath.name());
+				directoryProperties.remove(MandatoryProperties.directoryName.name());
+				directoryProperties.remove(MandatoryProperties.version.name());
+			}
+			catch (VersionNotFound e) {}
+			
+			this.deleteDirectoryTemporarily(userId, filesystemId, oldDirectoryPath, oldDirectoryName);
+			this.createNewDirectory(newDirectoryPath, newDirectoryName, filesystemId, userId, directoryProperties);
+			
+			CommonCode commonCode = new CommonCode();
+			Vertex oldDirectory = commonCode.getDirectory(userId, filesystemId, oldDirectoryPath, oldDirectoryName, true);
+			Vertex newDirectory = commonCode.getDirectory(userId, filesystemId, oldDirectoryPath, oldDirectoryName, false);
+			for(Edge oldRelationship : oldDirectory.getEdges(Direction.OUT, RelationshipLabels.has.name()))
+			{
+				Edge newRelationship = newDirectory.addEdge(oldRelationship.getLabel(), oldRelationship.getVertex(Direction.IN));
+				
+				for(String key : oldRelationship.getPropertyKeys())
+				{
+					newRelationship.setProperty(key, oldRelationship.getProperty(key));
+				}
+				
+				oldRelationship.remove();
+			}
+			for(Edge oldRelationship : oldDirectory.getEdges(Direction.OUT, RelationshipLabels.had.name()))
+			{
+				Edge newRelationship = newDirectory.addEdge(oldRelationship.getLabel(), oldRelationship.getVertex(Direction.IN));
+				
+				for(String key : oldRelationship.getPropertyKeys())
+				{
+					newRelationship.setProperty(key, oldRelationship.getProperty(key));
+				}
+				
+				oldRelationship.remove();
+			}
+			
+			titanTransaction.commit();
+		}
+		finally
+		{
+			if(titanTransaction.isOpen())
+			{
+				titanTransaction.rollback();
+			}
+		}
+	}
 
 	@Override
 	public Map<String, Object> getDirectory(String userId, String filesystemId, String directoryPath, String directoryName, int version) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, VersionNotFound

@@ -146,6 +146,47 @@ public class DirectoryServiceImpl implements DirectoryService
 	}
 	
 	@Override
+	public void moveDirectory(String userId, String filesystemId, String oldDirectoryPath, String oldDirectoryName, String newDirectoryPath, String newDirectoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateDirectory
+	{
+		try(Transaction transaction = this.graphDatabaseService.beginTx())
+		{
+			Map<String, Object> directoryProperties = null;
+			try
+			{
+				directoryProperties = this.getDirectory(userId, filesystemId, oldDirectoryPath, oldDirectoryName, -1);
+				directoryProperties.remove(MandatoryProperties.nodeId.name());
+				directoryProperties.remove(MandatoryProperties.directoryPath.name());
+				directoryProperties.remove(MandatoryProperties.directoryName.name());
+				directoryProperties.remove(MandatoryProperties.version.name());
+			}
+			catch (VersionNotFound e) {}
+			
+			this.deleteDirectoryTemporarily(userId, filesystemId, oldDirectoryPath, oldDirectoryName);
+			this.createNewDirectory(newDirectoryPath, newDirectoryName, filesystemId, userId, directoryProperties);
+			
+			CommonCode commonCode = new CommonCode();
+			Node oldDirectory = commonCode.getDirectory(userId, filesystemId, oldDirectoryPath, oldDirectoryName, true);
+			Node newDirectory = commonCode.getDirectory(userId, filesystemId, newDirectoryPath, newDirectoryName, false);
+			for(Relationship oldRelationship : oldDirectory.getRelationships(Direction.OUTGOING))
+			{
+				if(oldRelationship.isType(RelationshipLabels.has) || oldRelationship.isType(RelationshipLabels.had))
+				{
+					Relationship newRelationship = newDirectory.createRelationshipTo(oldRelationship.getEndNode(), oldRelationship.getType());
+					
+					for(String key : oldRelationship.getPropertyKeys())
+					{
+						newRelationship.setProperty(key, oldRelationship.getProperty(key));
+					}
+					
+					oldRelationship.delete();
+				}
+			}
+			
+			transaction.success();
+		}
+	}
+	
+	@Override
 	public Map<String, Object> getDirectory(String userId, String filesystemId, String directoryPath, String directoryName, int version) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, VersionNotFound
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())

@@ -109,6 +109,7 @@ public class FileServiceTest
 		assertEquals(fileProperties.size() + 5, retrievedFileV1Properties.size());
 		
 		this.fileService.moveFile(userId, filesystemId, filePath, fileName, "/testFolder2/testFolder", "test_renamed.txt");
+		this.directoryService.moveDirectory(userId, filesystemId, directoryPath2, directoryName2, "/testFolder2", "testFolder1.1");
 		//this.fileService.deleteFileTemporarily(userId, filesystemId, filePath, fileName);
 		
 		this.filesystemService.createNewVersion(userId, filesystemId, changeMetadata, new HashMap<String, Object>());

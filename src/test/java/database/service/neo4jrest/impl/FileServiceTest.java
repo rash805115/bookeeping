@@ -86,11 +86,13 @@ public class FileServiceTest
 		fileProperties.put("backupLocations", "[http://googledrive.com/testUser/file1.txt, http://dropbox.com/testUser/file1.txt]");
 		fileProperties.put("dateCreated", new Date().toString());
 		
+		String commitId = "commit1";
+		
 		this.userService.createNewUser(userId, userProperties);
 		this.filesystemService.createNewFilesystem(filesystemId, userId, filesystemProperties);
 		this.directoryService.createNewDirectory(directoryPath, directoryName, filesystemId, userId, directoryProperties);
 		this.directoryService.createNewDirectory(directoryPath2, directoryName2, filesystemId, userId, directoryProperties2);
-		this.fileService.createNewFile(filePath, fileName, filesystemId, userId, fileProperties);
+		this.fileService.createNewFile(commitId, filePath, fileName, filesystemId, userId, fileProperties);
 		
 		Map<String, Object> changeMetadata = new HashMap<String, Object>();
 		changeMetadata.put("versionChangeType", VersionChangeType.MODIFY.name());
@@ -100,7 +102,7 @@ public class FileServiceTest
 		changedProperties.put("backupLocations", "[http://googledrive.com/testUser/file1_mod.txt, http://dropbox.com/testUser/file1_mod.txt]");
 		changedProperties.put("testProperty", "Test Property");
 		
-		this.fileService.createNewVersion(userId, filesystemId, filePath, fileName, changeMetadata, changedProperties);
+		this.fileService.createNewVersion(commitId, userId, filesystemId, filePath, fileName, changeMetadata, changedProperties);
 		
 		Map<String, Object> retrievedFileV0Properties = this.fileService.getFile(userId, filesystemId, filePath, fileName, 0);
 		Map<String, Object> retrievedFileV1Properties = this.fileService.getFile(userId, filesystemId, filePath, fileName, -1);
@@ -108,7 +110,7 @@ public class FileServiceTest
 		assertEquals(fileProperties.size() + 4, retrievedFileV0Properties.size());
 		assertEquals(fileProperties.size() + 5, retrievedFileV1Properties.size());
 		
-		this.fileService.moveFile(userId, filesystemId, filePath, fileName, "/testFolder2/testFolder", "test_renamed.txt");
+		this.fileService.moveFile(commitId, userId, filesystemId, filePath, fileName, "/testFolder2/testFolder", "test_renamed.txt");
 		this.directoryService.moveDirectory(userId, filesystemId, directoryPath2, directoryName2, "/testFolder2", "testFolder1.1");
 		//this.fileService.deleteFileTemporarily(userId, filesystemId, filePath, fileName);
 		

@@ -32,7 +32,7 @@ public class FileServiceImpl implements FileService
 	}
 	
 	@Override
-	public void createNewFile(String filePath, String fileName, String filesystemId, String userId, Map<String, Object> fileProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateFile
+	public void createNewFile(String commitId, String filePath, String fileName, String filesystemId, String userId, Map<String, Object> fileProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateFile
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
 		
@@ -70,7 +70,7 @@ public class FileServiceImpl implements FileService
 					node.setProperty(filePropertiesEntry.getKey(), filePropertiesEntry.getValue());
 				}
 				
-				parentDirectory.addEdge(RelationshipLabels.has.name(), node);
+				parentDirectory.addEdge(RelationshipLabels.has.name(), node).setProperty(MandatoryProperties.commitId.name(), commitId);
 				titanTransaction.commit();
 			}
 		}
@@ -84,7 +84,7 @@ public class FileServiceImpl implements FileService
 	}
 
 	@Override
-	public void createNewVersion(String userId, String filesystemId, String filePath, String fileName, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound
+	public void createNewVersion(String commitId, String userId, String filesystemId, String filePath, String fileName, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
 		
@@ -111,6 +111,7 @@ public class FileServiceImpl implements FileService
 			{
 				relationship.setProperty(entry.getKey(), entry.getValue());
 			}
+			relationship.setProperty(MandatoryProperties.commitId.name(), commitId);
 			
 			titanTransaction.commit();
 		}
@@ -124,7 +125,7 @@ public class FileServiceImpl implements FileService
 	}
 
 	@Override
-	public void deleteFileTemporarily(String userId, String filesystemId, String filePath, String fileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound
+	public void deleteFileTemporarily(String commitId, String userId, String filesystemId, String filePath, String fileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
 		
@@ -139,6 +140,7 @@ public class FileServiceImpl implements FileService
 			{
 				hadRelationship.setProperty(key, hasRelationship.getProperty(key));
 			}
+			hadRelationship.setProperty(MandatoryProperties.commitId.name(), commitId);
 			
 			hasRelationship.remove();
 			titanTransaction.commit();
@@ -153,7 +155,7 @@ public class FileServiceImpl implements FileService
 	}
 	
 	@Override
-	public void restoreTemporaryDeletedFile(String userId, String filesystemId, String filePath, String fileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, DuplicateFile
+	public void restoreTemporaryDeletedFile(String commitId, String userId, String filesystemId, String filePath, String fileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, DuplicateFile
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
 		
@@ -176,6 +178,7 @@ public class FileServiceImpl implements FileService
 				{
 					hasRelationship.setProperty(key, hadRelationship.getProperty(key));
 				}
+				hasRelationship.setProperty(MandatoryProperties.commitId.name(), commitId);
 				
 				hadRelationship.remove();
 				titanTransaction.commit();
@@ -191,7 +194,7 @@ public class FileServiceImpl implements FileService
 	}
 	
 	@Override
-	public void moveFile(String userId, String filesystemId, String oldFilePath, String oldFileName, String newFilePath, String newFileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, DuplicateFile
+	public void moveFile(String commitId, String userId, String filesystemId, String oldFilePath, String oldFileName, String newFilePath, String newFileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, DuplicateFile
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
 		
@@ -208,8 +211,8 @@ public class FileServiceImpl implements FileService
 			}
 			catch (VersionNotFound e) {}
 			
-			this.deleteFileTemporarily(userId, filesystemId, oldFilePath, oldFileName);
-			this.createNewFile(newFilePath, newFileName, filesystemId, userId, fileProperties);
+			this.deleteFileTemporarily(commitId, userId, filesystemId, oldFilePath, oldFileName);
+			this.createNewFile(commitId, newFilePath, newFileName, filesystemId, userId, fileProperties);
 			titanTransaction.commit();
 		}
 		finally

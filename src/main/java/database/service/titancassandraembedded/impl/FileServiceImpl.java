@@ -52,7 +52,7 @@ public class FileServiceImpl implements FileService
 					String directoryName = filePath.substring(filePath.lastIndexOf("/") + 1, filePath.length());
 					String directoryPath = filePath.substring(0, filePath.lastIndexOf("/" + directoryName));
 					directoryPath = directoryPath.length() == 0 ? "/" : directoryPath;
-					parentDirectory = commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, false);
+					parentDirectory = commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, false, null);
 				}
 				
 				commonCode.getFile(userId, filesystemId, filePath, fileName, false);
@@ -95,7 +95,7 @@ public class FileServiceImpl implements FileService
 			Vertex file = null;
 			try
 			{
-				file = commonCode.getVersion("file", userId, filesystemId, filePath, fileName, -1, false);
+				file = commonCode.getVersion("file", userId, filesystemId, filePath, fileName, -1, false, null);
 			}
 			catch (VersionNotFound e) {}
 			Vertex versionedFile = commonCode.copyNode(file);
@@ -307,7 +307,7 @@ public class FileServiceImpl implements FileService
 		
 		try
 		{
-			Vertex file = new CommonCode().getVersion("file", userId, filesystemId, filePath, fileName, version, false);
+			Vertex file = new CommonCode().getVersion("file", userId, filesystemId, filePath, fileName, version, false, null);
 			Map<String, Object> fileProperties = new HashMap<String, Object>();
 			
 			Iterable<String> keys = file.getPropertyKeys();

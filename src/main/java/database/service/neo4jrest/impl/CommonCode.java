@@ -79,7 +79,7 @@ public class CommonCode
 		return filesystem.getSingleRelationship(RelationshipLabels.has, Direction.OUTGOING).getEndNode();
 	}
 	
-	public Node getDirectory(String userId, String filesystemId, String directoryPath, String directoryName, boolean deleted) throws FilesystemNotFound, UserNotFound, DirectoryNotFound
+	public Node getDirectory(String userId, String filesystemId, String directoryPath, String directoryName, boolean deleted, String commitId) throws FilesystemNotFound, UserNotFound, DirectoryNotFound
 	{
 		Node rootDirectory = this.getRootDirectory(userId, filesystemId);
 		Iterable<Relationship> iterable;
@@ -99,8 +99,9 @@ public class CommonCode
 			{
 				String retrievedDirectoryPath = (String) node.getProperty(MandatoryProperties.directoryPath.name());
 				String retrievedDirectoryName = (String) node.getProperty(MandatoryProperties.directoryName.name());
+				String retrievedCommitId = (String) node.getProperty(MandatoryProperties.commitId.name());
 				
-				if(retrievedDirectoryPath.equals(directoryPath) && retrievedDirectoryName.equals(directoryName))
+				if(retrievedDirectoryPath.equals(directoryPath) && retrievedDirectoryName.equals(directoryName) && (commitId == null ? true : retrievedCommitId.equals(commitId)))
 				{
 					return node;
 				}
@@ -122,7 +123,7 @@ public class CommonCode
 			String directoryName = filePath.substring(filePath.lastIndexOf("/") + 1, filePath.length());
 			String directoryPath = filePath.substring(0, filePath.lastIndexOf("/" + directoryName));
 			directoryPath = directoryPath.length() == 0 ? "/" : directoryPath;
-			parentDirectory = this.getDirectory(userId, filesystemId, directoryPath, directoryName, false);
+			parentDirectory = this.getDirectory(userId, filesystemId, directoryPath, directoryName, false, null);
 		}
 		
 		Iterable<Relationship> iterable;
@@ -153,7 +154,7 @@ public class CommonCode
 		throw new FileNotFound("ERROR: File not found! - \"" + (filePath.equals("/") ? "" : filePath) + "/" + fileName + "\"");
 	}
 	
-	public Node getVersion(String nodeType, String userId, String filesystemId, String path, String name, int version, boolean deleted) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
+	public Node getVersion(String nodeType, String userId, String filesystemId, String path, String name, int version, boolean deleted, String commitId) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
 	{
 		Node node = null;
 		if(nodeType.equalsIgnoreCase("filesystem"))
@@ -162,7 +163,7 @@ public class CommonCode
 		}
 		else if(nodeType.equalsIgnoreCase("directory"))
 		{
-			node = this.getDirectory(userId, filesystemId, path, name, deleted);
+			node = this.getDirectory(userId, filesystemId, path, name, deleted, commitId);
 		}
 		else
 		{

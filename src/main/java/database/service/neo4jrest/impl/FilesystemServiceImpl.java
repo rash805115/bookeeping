@@ -79,7 +79,7 @@ public class FilesystemServiceImpl implements FilesystemService
 			Node filesystem = null;
 			try
 			{
-				filesystem = commonCode.getVersion("filesystem", userId, filesystemId, null, null, -1, false);
+				filesystem = commonCode.getVersion("filesystem", userId, filesystemId, null, null, -1, false, null);
 			}
 			catch (VersionNotFound | FileNotFound | DirectoryNotFound e) {}
 			Node versionedFilesystem = commonCode.copyNodeTree(filesystem);
@@ -158,7 +158,7 @@ public class FilesystemServiceImpl implements FilesystemService
 			Node filesystem = null;
 			try
 			{
-				filesystem = new CommonCode().getVersion("filesystem", userId, filesystemId, null, null, version, false);
+				filesystem = new CommonCode().getVersion("filesystem", userId, filesystemId, null, null, version, false, null);
 			}
 			catch (FileNotFound | DirectoryNotFound e) {}
 			Map<String, Object> filesystemProperties = new HashMap<String, Object>();

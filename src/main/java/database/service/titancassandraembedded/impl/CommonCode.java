@@ -74,7 +74,7 @@ public class CommonCode
 		return filesystem.getVertices(Direction.OUT, RelationshipLabels.has.name()).iterator().next();
 	}
 	
-	public Vertex getDirectory(String userId, String filesystemId, String directoryPath, String directoryName, boolean deleted) throws FilesystemNotFound, UserNotFound, DirectoryNotFound
+	public Vertex getDirectory(String userId, String filesystemId, String directoryPath, String directoryName, boolean deleted, String commitId) throws FilesystemNotFound, UserNotFound, DirectoryNotFound
 	{
 		Vertex rootDirectory = this.getRootDirectory(userId, filesystemId);
 		Iterable<Vertex> iterable;
@@ -91,8 +91,9 @@ public class CommonCode
 		{
 			String retrievedDirectoryPath = vertex.getProperty(MandatoryProperties.directoryPath.name());
 			String retrievedDirectoryName = vertex.getProperty(MandatoryProperties.directoryName.name());
+			String retrievedCommitId = vertex.getProperty(MandatoryProperties.commitId.name());
 			
-			if(retrievedDirectoryPath.equals(directoryPath) && retrievedDirectoryName.equals(directoryName))
+			if(retrievedDirectoryPath.equals(directoryPath) && retrievedDirectoryName.equals(directoryName) && (commitId == null ? true : retrievedCommitId.equals(commitId)))
 			{
 				return vertex;
 			}
@@ -113,7 +114,7 @@ public class CommonCode
 			String directoryName = filePath.substring(filePath.lastIndexOf("/") + 1, filePath.length());
 			String directoryPath = filePath.substring(0, filePath.lastIndexOf("/" + directoryName));
 			directoryPath = directoryPath.length() == 0 ? "/" : directoryPath;
-			parentDirectory = this.getDirectory(userId, filesystemId, directoryPath, directoryName, false);
+			parentDirectory = this.getDirectory(userId, filesystemId, directoryPath, directoryName, false, null);
 		}
 		
 		Iterable<Vertex> iterable;
@@ -140,7 +141,7 @@ public class CommonCode
 		throw new FileNotFound("ERROR: File not found! - \"" + (filePath.equals("/") ? "" : filePath) + "/" + fileName + "\"");
 	}
 	
-	public Vertex getVersion(String nodeType, String userId, String filesystemId, String path, String name, int version, boolean deleted) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
+	public Vertex getVersion(String nodeType, String userId, String filesystemId, String path, String name, int version, boolean deleted, String commitId) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
 	{
 		Vertex node = null;
 		if(nodeType.equalsIgnoreCase("filesystem"))
@@ -149,7 +150,7 @@ public class CommonCode
 		}
 		else if(nodeType.equalsIgnoreCase("directory"))
 		{
-			node = this.getDirectory(userId, filesystemId, path, name, deleted);
+			node = this.getDirectory(userId, filesystemId, path, name, deleted, commitId);
 		}
 		else
 		{

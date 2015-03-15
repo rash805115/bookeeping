@@ -38,12 +38,10 @@ public class DirectoryServiceImpl implements DirectoryService
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			Node rootDirectory = null;
+			CommonCode commonCode = new CommonCode();
 			try
 			{
-				CommonCode commonCode = new CommonCode();
-				rootDirectory = commonCode.getRootDirectory(userId, filesystemId);
-				commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, false);
+				commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, false, null);
 				throw new DuplicateDirectory("ERROR: Directory already present! - \"" + directoryPath + "/" + directoryName + "\"");
 			}
 			catch(DirectoryNotFound directoryNotFound)
@@ -59,6 +57,7 @@ public class DirectoryServiceImpl implements DirectoryService
 					node.setProperty(directoryPropertiesEntry.getKey(), directoryPropertiesEntry.getValue());
 				}
 				
+				Node rootDirectory = commonCode.getRootDirectory(userId, filesystemId);
 				rootDirectory.createRelationshipTo(node, RelationshipLabels.has).setProperty(MandatoryProperties.commitId.name(), commitId);
 				transaction.success();
 			}
@@ -74,7 +73,7 @@ public class DirectoryServiceImpl implements DirectoryService
 			Node directory = null;
 			try
 			{
-				directory = commonCode.getVersion("directory", userId, filesystemId, directoryPath, directoryName, -1, false);
+				directory = commonCode.getVersion("directory", userId, filesystemId, directoryPath, directoryName, -1, false, null);
 			}
 			catch (VersionNotFound | FileNotFound e) {}
 			Node versionedDirectory = commonCode.copyNode(directory);
@@ -104,7 +103,7 @@ public class DirectoryServiceImpl implements DirectoryService
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			Node directory = new CommonCode().getDirectory(userId, filesystemId, directoryPath, directoryName, false);
+			Node directory = new CommonCode().getDirectory(userId, filesystemId, directoryPath, directoryName, false, null);
 			Relationship hasRelationship = directory.getSingleRelationship(RelationshipLabels.has, Direction.INCOMING);
 			Node parentDirectory = hasRelationship.getStartNode();
 			
@@ -121,19 +120,19 @@ public class DirectoryServiceImpl implements DirectoryService
 	}
 	
 	@Override
-	public void restoreTemporaryDeletedDirectory(String commitId, String userId, String filesystemId, String directoryPath, String directoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateDirectory
+	public void restoreTemporaryDeletedDirectory(String commitId, String userId, String filesystemId, String directoryPath, String directoryName, String previousCommitId) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateDirectory
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
 			CommonCode commonCode = new CommonCode();
 			try
 			{
-				commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, false);
+				commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, false, null);
 				throw new DuplicateDirectory("ERROR: Directory already present! - \"" + directoryPath + "/" + directoryName + "\"");
 			}
 			catch(DirectoryNotFound directoryNotFound)
 			{
-				Node directory = commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, true);
+				Node directory = commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, true, previousCommitId);
 				Relationship hadRelationship = directory.getSingleRelationship(RelationshipLabels.had, Direction.INCOMING);
 				Node parentDirectory = hadRelationship.getStartNode();
 				
@@ -170,8 +169,8 @@ public class DirectoryServiceImpl implements DirectoryService
 			this.createNewDirectory(commitId, newDirectoryPath, newDirectoryName, filesystemId, userId, directoryProperties);
 			
 			CommonCode commonCode = new CommonCode();
-			Node oldDirectory = commonCode.getDirectory(userId, filesystemId, oldDirectoryPath, oldDirectoryName, true);
-			Node newDirectory = commonCode.getDirectory(userId, filesystemId, newDirectoryPath, newDirectoryName, false);
+			Node oldDirectory = commonCode.getDirectory(userId, filesystemId, oldDirectoryPath, oldDirectoryName, true, commitId);
+			Node newDirectory = commonCode.getDirectory(userId, filesystemId, newDirectoryPath, newDirectoryName, false, null);
 			for(Relationship oldRelationship : oldDirectory.getRelationships(Direction.OUTGOING))
 			{
 				if(oldRelationship.isType(RelationshipLabels.has) || oldRelationship.isType(RelationshipLabels.had))
@@ -201,7 +200,7 @@ public class DirectoryServiceImpl implements DirectoryService
 			Node directory = null;
 			try
 			{
-				directory = new CommonCode().getVersion("directory", userId, filesystemId, directoryPath, directoryName, version, false);
+				directory = new CommonCode().getVersion("directory", userId, filesystemId, directoryPath, directoryName, version, false, null);
 			}
 			catch (FileNotFound e) {}
 			Map<String, Object> directoryProperties = new HashMap<String, Object>();

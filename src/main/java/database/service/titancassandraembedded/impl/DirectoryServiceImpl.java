@@ -38,12 +38,10 @@ public class DirectoryServiceImpl implements DirectoryService
 		
 		try
 		{
-			Vertex rootDirectory = null;
+			CommonCode commonCode = new CommonCode();
 			try
 			{
-				CommonCode commonCode = new CommonCode();
-				rootDirectory = commonCode.getRootDirectory(userId, filesystemId);
-				commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, false);
+				commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, false, null);
 				throw new DuplicateDirectory("ERROR: Directory already present! - \"" + directoryPath + "/" + directoryName + "\"");
 			}
 			catch(DirectoryNotFound directoryNotFound)
@@ -59,6 +57,7 @@ public class DirectoryServiceImpl implements DirectoryService
 					node.setProperty(directoryPropertiesEntry.getKey(), directoryPropertiesEntry.getValue());
 				}
 				
+				Vertex rootDirectory = commonCode.getRootDirectory(userId, filesystemId);
 				rootDirectory.addEdge(RelationshipLabels.has.name(), node).setProperty(MandatoryProperties.commitId.name(), commitId);
 				titanTransaction.commit();
 			}
@@ -83,7 +82,7 @@ public class DirectoryServiceImpl implements DirectoryService
 			Vertex directory = null;
 			try
 			{
-				directory = commonCode.getVersion("directory", userId, filesystemId, directoryPath, directoryName, -1, false);
+				directory = commonCode.getVersion("directory", userId, filesystemId, directoryPath, directoryName, -1, false, null);
 			}
 			catch (VersionNotFound | FileNotFound e) {}
 			Vertex versionedDirectory = commonCode.copyNode(directory);
@@ -122,7 +121,7 @@ public class DirectoryServiceImpl implements DirectoryService
 		
 		try
 		{
-			Vertex directory = new CommonCode().getDirectory(userId, filesystemId, directoryPath, directoryName, false);
+			Vertex directory = new CommonCode().getDirectory(userId, filesystemId, directoryPath, directoryName, false, null);
 			Edge hasRelationship = directory.getEdges(Direction.IN, RelationshipLabels.has.name()).iterator().next();
 			Vertex parentDirectory = hasRelationship.getVertex(Direction.OUT);
 			
@@ -146,7 +145,7 @@ public class DirectoryServiceImpl implements DirectoryService
 	}
 	
 	@Override
-	public void restoreTemporaryDeletedDirectory(String commitId, String userId, String filesystemId, String directoryPath, String directoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateDirectory
+	public void restoreTemporaryDeletedDirectory(String commitId, String userId, String filesystemId, String directoryPath, String directoryName, String previousCommitId) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateDirectory
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
 		
@@ -155,12 +154,12 @@ public class DirectoryServiceImpl implements DirectoryService
 			CommonCode commonCode = new CommonCode();
 			try
 			{
-				commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, false);
+				commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, false, null);
 				throw new DuplicateDirectory("ERROR: Directory already present! - \"" + directoryPath + "/" + directoryName + "\"");
 			}
 			catch(DirectoryNotFound directoryNotFound)
 			{
-				Vertex directory = commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, true);
+				Vertex directory = commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, true, previousCommitId);
 				Edge hadRelationship = directory.getEdges(Direction.IN, RelationshipLabels.had.name()).iterator().next();
 				Vertex parentDirectory = hadRelationship.getVertex(Direction.OUT);
 				
@@ -206,8 +205,8 @@ public class DirectoryServiceImpl implements DirectoryService
 			this.createNewDirectory(commitId, newDirectoryPath, newDirectoryName, filesystemId, userId, directoryProperties);
 			
 			CommonCode commonCode = new CommonCode();
-			Vertex oldDirectory = commonCode.getDirectory(userId, filesystemId, oldDirectoryPath, oldDirectoryName, true);
-			Vertex newDirectory = commonCode.getDirectory(userId, filesystemId, oldDirectoryPath, oldDirectoryName, false);
+			Vertex oldDirectory = commonCode.getDirectory(userId, filesystemId, oldDirectoryPath, oldDirectoryName, true, commitId);
+			Vertex newDirectory = commonCode.getDirectory(userId, filesystemId, oldDirectoryPath, oldDirectoryName, false, null);
 			for(Edge oldRelationship : oldDirectory.getEdges(Direction.OUT, RelationshipLabels.has.name()))
 			{
 				Vertex endNode = oldRelationship.getVertex(Direction.IN);
@@ -256,7 +255,7 @@ public class DirectoryServiceImpl implements DirectoryService
 			Vertex directory = null;
 			try
 			{
-				directory = new CommonCode().getVersion("directory", userId, filesystemId, directoryPath, directoryName, version, false);
+				directory = new CommonCode().getVersion("directory", userId, filesystemId, directoryPath, directoryName, version, false, null);
 			}
 			catch (FileNotFound e) {}
 			Map<String, Object> directoryProperties = new HashMap<String, Object>();

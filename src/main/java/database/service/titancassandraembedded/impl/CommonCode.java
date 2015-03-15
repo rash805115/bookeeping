@@ -102,7 +102,7 @@ public class CommonCode
 		throw new DirectoryNotFound("ERROR: Directory not found! - \"" + (directoryPath.equals("/") ? "" : directoryPath) + "/" + directoryName + "\"");
 	}
 	
-	public Vertex getFile(String userId, String filesystemId, String filePath, String fileName, boolean deleted) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, FileNotFound
+	public Vertex getFile(String userId, String filesystemId, String filePath, String fileName, boolean deleted, String commitId) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, FileNotFound
 	{
 		Vertex parentDirectory = null;
 		if(filePath.equals("/"))
@@ -131,8 +131,9 @@ public class CommonCode
 		{
 			String retrievedFilePath = vertex.getProperty(MandatoryProperties.filePath.name());
 			String retrievedFileName = vertex.getProperty(MandatoryProperties.fileName.name());
+			String retrievedCommitId = vertex.getProperty(MandatoryProperties.commitId.name());
 			
-			if(retrievedFilePath.equals(filePath) && retrievedFileName.equals(fileName))
+			if(retrievedFilePath.equals(filePath) && retrievedFileName.equals(fileName) && (commitId == null ? true : retrievedCommitId.equals(commitId)))
 			{
 				return vertex;
 			}
@@ -154,7 +155,7 @@ public class CommonCode
 		}
 		else
 		{
-			node = this.getFile(userId, filesystemId, path, name, deleted);
+			node = this.getFile(userId, filesystemId, path, name, deleted, commitId);
 		}
 		
 		do

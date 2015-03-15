@@ -17,7 +17,7 @@ public interface FileService
 	public void shareFile(String commitId, String userId, String filesystemId, String filePath, String fileName, String shareWithUserId, FilePermission filePermission) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound;
 	public void unshareFile(String commitId, String userId, String filesystemId, String filePath, String fileName, String unshareWithUserId) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound;
 	public void deleteFileTemporarily(String commitId, String userId, String filesystemId, String filePath, String fileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound;
-	public void restoreTemporaryDeletedFile(String commitId, String userId, String filesystemId, String filePath, String fileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, DuplicateFile;
+	public void restoreTemporaryDeletedFile(String commitId, String userId, String filesystemId, String filePath, String fileName, String previousCommitId) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, DuplicateFile;
 	public void moveFile(String commitId, String userId, String filesystemId, String oldFilePath, String oldFileName, String newFilePath, String newFileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, DuplicateFile;
 	public Map<String, Object> getFile(String userId, String filesystemId, String filePath, String fileName, int version) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound;
 }

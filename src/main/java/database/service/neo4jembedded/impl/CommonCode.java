@@ -111,7 +111,7 @@ public class CommonCode
 		throw new DirectoryNotFound("ERROR: Directory not found! - \"" + (directoryPath.equals("/") ? "" : directoryPath) + "/" + directoryName + "\"");
 	}
 	
-	public Node getFile(String userId, String filesystemId, String filePath, String fileName, boolean deleted) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, FileNotFound
+	public Node getFile(String userId, String filesystemId, String filePath, String fileName, boolean deleted, String commitId) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, FileNotFound
 	{
 		Node parentDirectory = null;
 		if(filePath.equals("/"))
@@ -143,8 +143,9 @@ public class CommonCode
 			{
 				String retrievedFilePath = (String) node.getProperty(MandatoryProperties.filePath.name());
 				String retrievedFileName = (String) node.getProperty(MandatoryProperties.fileName.name());
+				String retrievedCommitId = (String) node.getProperty(MandatoryProperties.commitId.name());
 				
-				if(retrievedFilePath.equals(filePath) && retrievedFileName.equals(fileName))
+				if(retrievedFilePath.equals(filePath) && retrievedFileName.equals(fileName) && (commitId == null ? true : retrievedCommitId.equals(commitId)))
 				{
 					return node;
 				}
@@ -167,7 +168,7 @@ public class CommonCode
 		}
 		else
 		{
-			node = this.getFile(userId, filesystemId, path, name, deleted);
+			node = this.getFile(userId, filesystemId, path, name, deleted, commitId);
 		}
 		
 		do

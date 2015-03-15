@@ -55,7 +55,7 @@ public class FileServiceImpl implements FileService
 					parentDirectory = commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, false, null);
 				}
 				
-				commonCode.getFile(userId, filesystemId, filePath, fileName, false);
+				commonCode.getFile(userId, filesystemId, filePath, fileName, false, null);
 				throw new DuplicateFile("ERROR: File already present! - \"" + filePath + "/" + fileName + "\"");
 			}
 			catch(FileNotFound fileNotFound)
@@ -118,7 +118,7 @@ public class FileServiceImpl implements FileService
 		{
 			CommonCode commonCode = new CommonCode();
 			Node beneficiaryUser = commonCode.getUser(shareWithUserId);
-			Node fileToBeShared = commonCode.getFile(userId, filesystemId, filePath, fileName, false);
+			Node fileToBeShared = commonCode.getFile(userId, filesystemId, filePath, fileName, false, null);
 			
 			for(Relationship relationship : beneficiaryUser.getRelationships(Direction.OUTGOING, RelationshipLabels.hasAccess))
 			{
@@ -144,7 +144,7 @@ public class FileServiceImpl implements FileService
 		{
 			CommonCode commonCode = new CommonCode();
 			Node beneficiaryUser = commonCode.getUser(unshareWithUserId);
-			Node fileToBeShared = commonCode.getFile(userId, filesystemId, filePath, fileName, false);
+			Node fileToBeShared = commonCode.getFile(userId, filesystemId, filePath, fileName, false, null);
 			
 			Relationship hadAccessRelationship = beneficiaryUser.createRelationshipTo(fileToBeShared, RelationshipLabels.hadAccess);
 			for(Relationship hasAccessRelationship : beneficiaryUser.getRelationships(Direction.OUTGOING, RelationshipLabels.hasAccess))
@@ -171,7 +171,7 @@ public class FileServiceImpl implements FileService
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			Node file = new CommonCode().getFile(userId, filesystemId, filePath, fileName, false);
+			Node file = new CommonCode().getFile(userId, filesystemId, filePath, fileName, false, null);
 			Relationship hasRelationship = file.getSingleRelationship(RelationshipLabels.has, Direction.INCOMING);
 			Node parentDirectory = hasRelationship.getStartNode();
 			
@@ -188,19 +188,19 @@ public class FileServiceImpl implements FileService
 	}
 	
 	@Override
-	public void restoreTemporaryDeletedFile(String commitId, String userId, String filesystemId, String filePath, String fileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, DuplicateFile
+	public void restoreTemporaryDeletedFile(String commitId, String userId, String filesystemId, String filePath, String fileName, String previousCommitId) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, DuplicateFile
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
 			CommonCode commonCode = new CommonCode();
 			try
 			{
-				commonCode.getFile(userId, filesystemId, filePath, fileName, false);
+				commonCode.getFile(userId, filesystemId, filePath, fileName, false, null);
 				throw new DuplicateFile("ERROR: File already present! - \"" + filePath + "/" + fileName + "\"");
 			}
 			catch(FileNotFound fileNotFound)
 			{
-				Node file = commonCode.getFile(userId, filesystemId, filePath, fileName, true);
+				Node file = commonCode.getFile(userId, filesystemId, filePath, fileName, true, previousCommitId);
 				Relationship hadRelationship = file.getSingleRelationship(RelationshipLabels.had, Direction.INCOMING);
 				Node parentDirectory = hadRelationship.getStartNode();
 				

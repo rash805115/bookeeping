@@ -55,7 +55,7 @@ public class FileServiceImpl implements FileService
 					parentDirectory = commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, false, null);
 				}
 				
-				commonCode.getFile(userId, filesystemId, filePath, fileName, false);
+				commonCode.getFile(userId, filesystemId, filePath, fileName, false, null);
 				throw new DuplicateFile("ERROR: File already present! - \"" + filePath + "/" + fileName + "\"");
 			}
 			catch(FileNotFound fileNotFound)
@@ -136,7 +136,7 @@ public class FileServiceImpl implements FileService
 		{
 			CommonCode commonCode = new CommonCode();
 			Vertex beneficiaryUser = commonCode.getUser(shareWithUserId);
-			Vertex fileToBeShared = commonCode.getFile(userId, filesystemId, filePath, fileName, false);
+			Vertex fileToBeShared = commonCode.getFile(userId, filesystemId, filePath, fileName, false, null);
 			
 			for(Edge relationship : beneficiaryUser.getEdges(Direction.OUT, RelationshipLabels.hasAccess.name()))
 			{
@@ -171,7 +171,7 @@ public class FileServiceImpl implements FileService
 		{
 			CommonCode commonCode = new CommonCode();
 			Vertex beneficiaryUser = commonCode.getUser(unshareWithUserId);
-			Vertex fileToBeShared = commonCode.getFile(userId, filesystemId, filePath, fileName, false);
+			Vertex fileToBeShared = commonCode.getFile(userId, filesystemId, filePath, fileName, false, null);
 			
 			Edge hadAccessRelationship = beneficiaryUser.addEdge(RelationshipLabels.hadAccess.name(), fileToBeShared);
 			for(Edge hasAccessRelationship : beneficiaryUser.getEdges(Direction.OUT, RelationshipLabels.hasAccess.name()))
@@ -207,7 +207,7 @@ public class FileServiceImpl implements FileService
 		
 		try
 		{
-			Vertex file = new CommonCode().getFile(userId, filesystemId, filePath, fileName, false);
+			Vertex file = new CommonCode().getFile(userId, filesystemId, filePath, fileName, false, null);
 			Edge hasRelationship = file.getEdges(Direction.IN, RelationshipLabels.has.name()).iterator().next();
 			Vertex parentDirectory = hasRelationship.getVertex(Direction.OUT);
 			
@@ -231,7 +231,7 @@ public class FileServiceImpl implements FileService
 	}
 	
 	@Override
-	public void restoreTemporaryDeletedFile(String commitId, String userId, String filesystemId, String filePath, String fileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, DuplicateFile
+	public void restoreTemporaryDeletedFile(String commitId, String userId, String filesystemId, String filePath, String fileName, String previousCommitId) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, DuplicateFile
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
 		
@@ -240,12 +240,12 @@ public class FileServiceImpl implements FileService
 			CommonCode commonCode = new CommonCode();
 			try
 			{
-				commonCode.getFile(userId, filesystemId, filePath, fileName, false);
+				commonCode.getFile(userId, filesystemId, filePath, fileName, false, null);
 				throw new DuplicateFile("ERROR: File already present! - \"" + filePath + "/" + fileName + "\"");
 			}
 			catch(FileNotFound fileNotFound)
 			{
-				Vertex file = commonCode.getFile(userId, filesystemId, filePath, fileName, true);
+				Vertex file = commonCode.getFile(userId, filesystemId, filePath, fileName, true, previousCommitId);
 				Edge hadRelationship = file.getEdges(Direction.IN, RelationshipLabels.had.name()).iterator().next();
 				Vertex parentDirectory = hadRelationship.getVertex(Direction.OUT);
 				

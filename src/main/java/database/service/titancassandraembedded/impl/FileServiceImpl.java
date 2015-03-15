@@ -106,6 +106,8 @@ public class FileServiceImpl implements FileService
 			{
 				versionedFile.setProperty(entry.getKey(), entry.getValue());
 			}
+			versionedFile.removeProperty(MandatoryProperties.filePath.name());
+			versionedFile.removeProperty(MandatoryProperties.fileName.name());
 			
 			Edge relationship = file.addEdge(RelationshipLabels.hasVersion.name(), versionedFile);
 			for(Entry<String, Object> entry : changeMetadata.entrySet())

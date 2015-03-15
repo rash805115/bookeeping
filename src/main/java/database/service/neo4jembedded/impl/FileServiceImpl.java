@@ -97,6 +97,8 @@ public class FileServiceImpl implements FileService
 			{
 				versionedFile.setProperty(entry.getKey(), entry.getValue());
 			}
+			versionedFile.removeProperty(MandatoryProperties.filePath.name());
+			versionedFile.removeProperty(MandatoryProperties.fileName.name());
 			
 			Relationship relationship = file.createRelationshipTo(versionedFile, RelationshipLabels.hasVersion);
 			for(Entry<String, Object> entry : changeMetadata.entrySet())

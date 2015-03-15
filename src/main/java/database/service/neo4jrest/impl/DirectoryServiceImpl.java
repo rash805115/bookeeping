@@ -85,6 +85,8 @@ public class DirectoryServiceImpl implements DirectoryService
 			{
 				versionedDirectory.setProperty(entry.getKey(), entry.getValue());
 			}
+			versionedDirectory.removeProperty(MandatoryProperties.directoryPath.name());
+			versionedDirectory.removeProperty(MandatoryProperties.directoryName.name());
 			
 			Relationship relationship = directory.createRelationshipTo(versionedDirectory, RelationshipLabels.hasVersion);
 			for(Entry<String, Object> entry : changeMetadata.entrySet())

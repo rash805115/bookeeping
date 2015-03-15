@@ -94,6 +94,8 @@ public class DirectoryServiceImpl implements DirectoryService
 			{
 				versionedDirectory.setProperty(entry.getKey(), entry.getValue());
 			}
+			versionedDirectory.removeProperty(MandatoryProperties.directoryPath.name());
+			versionedDirectory.removeProperty(MandatoryProperties.directoryName.name());
 			
 			Edge relationship = directory.addEdge(RelationshipLabels.hasVersion.name(), versionedDirectory);
 			for(Entry<String, Object> entry : changeMetadata.entrySet())

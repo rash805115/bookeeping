@@ -32,7 +32,7 @@ public class DirectoryServiceImpl implements DirectoryService
 	}
 	
 	@Override
-	public void createNewDirectory(String directoryPath, String directoryName, String filesystemId, String userId, Map<String, Object> directoryProperties) throws UserNotFound, FilesystemNotFound, DuplicateDirectory
+	public void createNewDirectory(String commitId, String directoryPath, String directoryName, String filesystemId, String userId, Map<String, Object> directoryProperties) throws UserNotFound, FilesystemNotFound, DuplicateDirectory
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
 		
@@ -59,7 +59,7 @@ public class DirectoryServiceImpl implements DirectoryService
 					node.setProperty(directoryPropertiesEntry.getKey(), directoryPropertiesEntry.getValue());
 				}
 				
-				rootDirectory.addEdge(RelationshipLabels.has.name(), node);
+				rootDirectory.addEdge(RelationshipLabels.has.name(), node).setProperty(MandatoryProperties.commitId.name(), commitId);
 				titanTransaction.commit();
 			}
 		}
@@ -73,7 +73,7 @@ public class DirectoryServiceImpl implements DirectoryService
 	}
 
 	@Override
-	public void createNewVersion(String userId, String filesystemId, String directoryPath, String directoryName, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound
+	public void createNewVersion(String commitId, String userId, String filesystemId, String directoryPath, String directoryName, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
 		
@@ -100,6 +100,7 @@ public class DirectoryServiceImpl implements DirectoryService
 			{
 				relationship.setProperty(entry.getKey(), entry.getValue());
 			}
+			relationship.setProperty(MandatoryProperties.commitId.name(), commitId);
 			
 			titanTransaction.commit();
 		}
@@ -113,7 +114,7 @@ public class DirectoryServiceImpl implements DirectoryService
 	}
 
 	@Override
-	public void deleteDirectoryTemporarily(String userId, String filesystemId, String directoryPath, String directoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound
+	public void deleteDirectoryTemporarily(String commitId, String userId, String filesystemId, String directoryPath, String directoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
 		
@@ -128,6 +129,7 @@ public class DirectoryServiceImpl implements DirectoryService
 			{
 				hadRelationship.setProperty(key, hasRelationship.getProperty(key));
 			}
+			hadRelationship.setProperty(MandatoryProperties.commitId.name(), commitId);
 			
 			hasRelationship.remove();
 			titanTransaction.commit();
@@ -142,7 +144,7 @@ public class DirectoryServiceImpl implements DirectoryService
 	}
 	
 	@Override
-	public void restoreTemporaryDeletedDirectory(String userId, String filesystemId, String directoryPath, String directoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateDirectory
+	public void restoreTemporaryDeletedDirectory(String commitId, String userId, String filesystemId, String directoryPath, String directoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateDirectory
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
 		
@@ -165,6 +167,7 @@ public class DirectoryServiceImpl implements DirectoryService
 				{
 					hasRelationship.setProperty(key, hadRelationship.getProperty(key));
 				}
+				hasRelationship.setProperty(MandatoryProperties.commitId.name(), commitId);
 				
 				hadRelationship.remove();
 				titanTransaction.commit();
@@ -180,7 +183,7 @@ public class DirectoryServiceImpl implements DirectoryService
 	}
 	
 	@Override
-	public void moveDirectory(String userId, String filesystemId, String oldDirectoryPath, String oldDirectoryName, String newDirectoryPath, String newDirectoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateDirectory
+	public void moveDirectory(String commitId, String userId, String filesystemId, String oldDirectoryPath, String oldDirectoryName, String newDirectoryPath, String newDirectoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateDirectory
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
 		
@@ -197,8 +200,8 @@ public class DirectoryServiceImpl implements DirectoryService
 			}
 			catch (VersionNotFound e) {}
 			
-			this.deleteDirectoryTemporarily(userId, filesystemId, oldDirectoryPath, oldDirectoryName);
-			this.createNewDirectory(newDirectoryPath, newDirectoryName, filesystemId, userId, directoryProperties);
+			this.deleteDirectoryTemporarily(commitId, userId, filesystemId, oldDirectoryPath, oldDirectoryName);
+			this.createNewDirectory(commitId, newDirectoryPath, newDirectoryName, filesystemId, userId, directoryProperties);
 			
 			CommonCode commonCode = new CommonCode();
 			Vertex oldDirectory = commonCode.getDirectory(userId, filesystemId, oldDirectoryPath, oldDirectoryName, true);

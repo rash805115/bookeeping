@@ -90,8 +90,8 @@ public class FileServiceTest
 		
 		this.userService.createNewUser(userId, userProperties);
 		this.filesystemService.createNewFilesystem(filesystemId, userId, filesystemProperties);
-		this.directoryService.createNewDirectory(directoryPath, directoryName, filesystemId, userId, directoryProperties);
-		this.directoryService.createNewDirectory(directoryPath2, directoryName2, filesystemId, userId, directoryProperties2);
+		this.directoryService.createNewDirectory(commitId, directoryPath, directoryName, filesystemId, userId, directoryProperties);
+		this.directoryService.createNewDirectory(commitId, directoryPath2, directoryName2, filesystemId, userId, directoryProperties2);
 		this.fileService.createNewFile(commitId, filePath, fileName, filesystemId, userId, fileProperties);
 		
 		Map<String, Object> changeMetadata = new HashMap<String, Object>();
@@ -111,7 +111,7 @@ public class FileServiceTest
 		assertEquals(fileProperties.size() + 5, retrievedFileV1Properties.size());
 		
 		this.fileService.moveFile(commitId, userId, filesystemId, filePath, fileName, "/testFolder2/testFolder", "test_renamed.txt");
-		this.directoryService.moveDirectory(userId, filesystemId, directoryPath2, directoryName2, "/testFolder2", "testFolder1.1");
+		this.directoryService.moveDirectory(commitId, userId, filesystemId, directoryPath2, directoryName2, "/testFolder2", "testFolder1.1");
 		//this.fileService.deleteFileTemporarily(userId, filesystemId, filePath, fileName);
 		
 		this.filesystemService.createNewVersion(userId, filesystemId, changeMetadata, new HashMap<String, Object>());

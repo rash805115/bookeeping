@@ -109,7 +109,7 @@ public class FileServiceTest
 		Map<String, Object> retrievedFileV1Properties = this.fileService.getFile(userId, filesystemId, filePath, fileName, -1);
 		
 		assertEquals(fileProperties.size() + 4, retrievedFileV0Properties.size());
-		assertEquals(fileProperties.size() + 5, retrievedFileV1Properties.size());
+		assertEquals(fileProperties.size() + 3, retrievedFileV1Properties.size());
 		
 		this.fileService.moveFile(commitId, userId, filesystemId, filePath, fileName, "/testFolder2/testFolder", "test_renamed.txt");
 		this.directoryService.moveDirectory(commitId, userId, filesystemId, directoryPath2, directoryName2, "/testFolder2", "testFolder1.1");

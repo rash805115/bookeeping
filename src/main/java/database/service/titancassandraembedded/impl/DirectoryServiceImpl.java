@@ -210,7 +210,9 @@ public class DirectoryServiceImpl implements DirectoryService
 			Vertex newDirectory = commonCode.getDirectory(userId, filesystemId, oldDirectoryPath, oldDirectoryName, false);
 			for(Edge oldRelationship : oldDirectory.getEdges(Direction.OUT, RelationshipLabels.has.name()))
 			{
-				Edge newRelationship = newDirectory.addEdge(oldRelationship.getLabel(), oldRelationship.getVertex(Direction.IN));
+				Vertex endNode = oldRelationship.getVertex(Direction.IN);
+				endNode.setProperty(MandatoryProperties.filePath.name(), newDirectoryPath + "/" + newDirectoryName);
+				Edge newRelationship = newDirectory.addEdge(oldRelationship.getLabel(), endNode);
 				
 				for(String key : oldRelationship.getPropertyKeys())
 				{
@@ -221,7 +223,9 @@ public class DirectoryServiceImpl implements DirectoryService
 			}
 			for(Edge oldRelationship : oldDirectory.getEdges(Direction.OUT, RelationshipLabels.had.name()))
 			{
-				Edge newRelationship = newDirectory.addEdge(oldRelationship.getLabel(), oldRelationship.getVertex(Direction.IN));
+				Vertex endNode = oldRelationship.getVertex(Direction.IN);
+				endNode.setProperty(MandatoryProperties.filePath.name(), newDirectoryPath + "/" + newDirectoryName);
+				Edge newRelationship = newDirectory.addEdge(oldRelationship.getLabel(), endNode);
 				
 				for(String key : oldRelationship.getPropertyKeys())
 				{

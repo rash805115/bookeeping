@@ -176,7 +176,9 @@ public class DirectoryServiceImpl implements DirectoryService
 			{
 				if(oldRelationship.isType(RelationshipLabels.has) || oldRelationship.isType(RelationshipLabels.had))
 				{
-					Relationship newRelationship = newDirectory.createRelationshipTo(oldRelationship.getEndNode(), oldRelationship.getType());
+					Node endNode = oldRelationship.getEndNode();
+					endNode.setProperty(MandatoryProperties.filePath.name(), newDirectoryPath + "/" + newDirectoryName);
+					Relationship newRelationship = newDirectory.createRelationshipTo(endNode, oldRelationship.getType());
 					
 					for(String key : oldRelationship.getPropertyKeys())
 					{

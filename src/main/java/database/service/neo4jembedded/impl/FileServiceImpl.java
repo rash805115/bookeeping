@@ -21,6 +21,7 @@ import exception.FileNotFound;
 import exception.FilesystemNotFound;
 import exception.UserNotFound;
 import exception.VersionNotFound;
+import file.FilePermission;
 
 public class FileServiceImpl implements FileService
 {
@@ -103,6 +104,60 @@ public class FileServiceImpl implements FileService
 				relationship.setProperty(entry.getKey(), entry.getValue());
 			}
 			relationship.setProperty(MandatoryProperties.commitId.name(), commitId);
+			
+			transaction.success();
+		}
+	}
+	
+	@Override
+	public void shareFile(String commitId, String userId, String filesystemId, String filePath, String fileName, String shareWithUserId, FilePermission filePermission) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound
+	{
+		try(Transaction transaction = this.graphDatabaseService.beginTx())
+		{
+			CommonCode commonCode = new CommonCode();
+			Node beneficiaryUser = commonCode.getUser(shareWithUserId);
+			Node fileToBeShared = commonCode.getFile(userId, filesystemId, filePath, fileName, false);
+			
+			for(Relationship relationship : beneficiaryUser.getRelationships(Direction.OUTGOING, RelationshipLabels.hasAccess))
+			{
+				if(relationship.getEndNode().getProperty(MandatoryProperties.nodeId.name()).equals(fileToBeShared.getProperty(MandatoryProperties.nodeId.name())))
+				{
+					relationship.delete();
+					break;
+				}
+			}
+			
+			Relationship newRelationship = beneficiaryUser.createRelationshipTo(fileToBeShared, RelationshipLabels.hasAccess);
+			newRelationship.setProperty(MandatoryProperties.permission.name(), filePermission.name());
+			newRelationship.setProperty(MandatoryProperties.commitId.name(), commitId);
+			
+			transaction.success();
+		}
+	}
+	
+	@Override
+	public void unshareFile(String commitId, String userId, String filesystemId, String filePath, String fileName, String unshareWithUserId) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound
+	{
+		try(Transaction transaction = this.graphDatabaseService.beginTx())
+		{
+			CommonCode commonCode = new CommonCode();
+			Node beneficiaryUser = commonCode.getUser(unshareWithUserId);
+			Node fileToBeShared = commonCode.getFile(userId, filesystemId, filePath, fileName, false);
+			
+			Relationship hadAccessRelationship = beneficiaryUser.createRelationshipTo(fileToBeShared, RelationshipLabels.hadAccess);
+			for(Relationship hasAccessRelationship : beneficiaryUser.getRelationships(Direction.OUTGOING, RelationshipLabels.hasAccess))
+			{
+				if(hasAccessRelationship.getEndNode().getProperty(MandatoryProperties.nodeId.name()).equals(fileToBeShared.getProperty(MandatoryProperties.nodeId.name())))
+				{
+					for(String key : hasAccessRelationship.getPropertyKeys())
+					{
+						hadAccessRelationship.setProperty(key, hasAccessRelationship.getProperty(key));
+					}
+					
+					hasAccessRelationship.delete();
+					break;
+				}
+			}
 			
 			transaction.success();
 		}

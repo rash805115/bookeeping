@@ -21,6 +21,7 @@ import exception.FileNotFound;
 import exception.FilesystemNotFound;
 import exception.UserNotFound;
 import exception.VersionNotFound;
+import file.FilePermission;
 
 public class FileServiceImpl implements FileService
 {
@@ -112,6 +113,78 @@ public class FileServiceImpl implements FileService
 				relationship.setProperty(entry.getKey(), entry.getValue());
 			}
 			relationship.setProperty(MandatoryProperties.commitId.name(), commitId);
+			
+			titanTransaction.commit();
+		}
+		finally
+		{
+			if(titanTransaction.isOpen())
+			{
+				titanTransaction.rollback();
+			}
+		}
+	}
+	
+	@Override
+	public void shareFile(String commitId, String userId, String filesystemId, String filePath, String fileName, String shareWithUserId, FilePermission filePermission) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound
+	{
+		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
+		
+		try
+		{
+			CommonCode commonCode = new CommonCode();
+			Vertex beneficiaryUser = commonCode.getUser(shareWithUserId);
+			Vertex fileToBeShared = commonCode.getFile(userId, filesystemId, filePath, fileName, false);
+			
+			for(Edge relationship : beneficiaryUser.getEdges(Direction.OUT, RelationshipLabels.hasAccess.name()))
+			{
+				if(relationship.getVertex(Direction.IN).getProperty(MandatoryProperties.nodeId.name()).equals(fileToBeShared.getProperty(MandatoryProperties.nodeId.name())))
+				{
+					relationship.remove();
+					break;
+				}
+			}
+			
+			Edge newRelationship = beneficiaryUser.addEdge(RelationshipLabels.hasAccess.name(), fileToBeShared);
+			newRelationship.setProperty(MandatoryProperties.permission.name(), filePermission.name());
+			newRelationship.setProperty(MandatoryProperties.commitId.name(), commitId);
+			
+			titanTransaction.commit();
+		}
+		finally
+		{
+			if(titanTransaction.isOpen())
+			{
+				titanTransaction.rollback();
+			}
+		}
+	}
+
+	@Override
+	public void unshareFile(String commitId, String userId, String filesystemId, String filePath, String fileName, String unshareWithUserId) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound
+	{
+		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
+		
+		try
+		{
+			CommonCode commonCode = new CommonCode();
+			Vertex beneficiaryUser = commonCode.getUser(unshareWithUserId);
+			Vertex fileToBeShared = commonCode.getFile(userId, filesystemId, filePath, fileName, false);
+			
+			Edge hadAccessRelationship = beneficiaryUser.addEdge(RelationshipLabels.hadAccess.name(), fileToBeShared);
+			for(Edge hasAccessRelationship : beneficiaryUser.getEdges(Direction.OUT, RelationshipLabels.hasAccess.name()))
+			{
+				if(hasAccessRelationship.getVertex(Direction.IN).getProperty(MandatoryProperties.nodeId.name()).equals(fileToBeShared.getProperty(MandatoryProperties.nodeId.name())))
+				{
+					for(String key : hasAccessRelationship.getPropertyKeys())
+					{
+						hadAccessRelationship.setProperty(key, hasAccessRelationship.getProperty(key));
+					}
+					
+					hasAccessRelationship.remove();
+					break;
+				}
+			}
 			
 			titanTransaction.commit();
 		}

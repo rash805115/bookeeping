@@ -24,6 +24,7 @@ import exception.FileNotFound;
 import exception.FilesystemNotFound;
 import exception.UserNotFound;
 import exception.VersionNotFound;
+import file.FilePermission;
 
 public class FileServiceTest
 {
@@ -117,5 +118,10 @@ public class FileServiceTest
 		this.filesystemService.createNewVersion(userId, filesystemId, changeMetadata, new HashMap<String, Object>());
 		this.filesystemService.deleteFilesystemTemporarily(userId, filesystemId);
 		this.filesystemService.restoreTemporaryDeletedFilesystem(userId, filesystemId);
+		
+		String userId2 = "testUser2";
+		this.userService.createNewUser(userId2, userProperties);
+		this.fileService.shareFile(commitId, userId, filesystemId, "/testFolder2/testFolder1.1", "test_renamed.txt", userId2, FilePermission.READ);
+		this.fileService.unshareFile(commitId, userId, filesystemId, "/testFolder2/testFolder1.1", "test_renamed.txt", userId2);
 	}
 }

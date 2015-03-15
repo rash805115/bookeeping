@@ -153,6 +153,7 @@ public class FileServiceImpl implements FileService
 					{
 						hadAccessRelationship.setProperty(key, hasAccessRelationship.getProperty(key));
 					}
+					hadAccessRelationship.setProperty(MandatoryProperties.commitId.name(), commitId);
 					
 					hasAccessRelationship.delete();
 					break;

@@ -2,10 +2,10 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>exubit</groupId>
-	<artifactId>bookeeping</artifactId>
+	<artifactId>bookeeping.backend</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>BooKeeping</name>
-	<description>Version control for filesystem</description>
+	<name>BooKeeping.Backend</name>
+	<description>BooKeeping Backend.</description>
 	<packaging>jar</packaging>
 
 	<properties>

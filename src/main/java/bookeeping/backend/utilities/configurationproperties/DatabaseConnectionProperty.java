@@ -13,7 +13,7 @@ public class DatabaseConnectionProperty
 		this.properties = new Properties();
 		try
 		{
-			this.properties.load(new FileInputStream("configurations" + File.separator + "databaseconnection.ini"));
+			this.properties.load(new FileInputStream(new File(System.getProperty("user.dir") + File.separator + "configurations" + File.separator + "databaseconnection.ini")));
 		}
 		catch (Exception exception)
 		{

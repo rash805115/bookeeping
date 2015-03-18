@@ -1,5 +1,5 @@
-# BooKeeping
-Version control for your file-system.
+# BooKeeping.Backend
+Backend for bookeeping project (Version control for fileysystems).
 
 # Author
 Rahul Chaudhary

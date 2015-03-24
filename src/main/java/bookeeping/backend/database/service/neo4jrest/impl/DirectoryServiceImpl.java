@@ -34,7 +34,7 @@ public class DirectoryServiceImpl implements DirectoryService
 	}
 	
 	@Override
-	public void createNewDirectory(String commitId, String directoryPath, String directoryName, String filesystemId, String userId, Map<String, Object> directoryProperties) throws UserNotFound, FilesystemNotFound, DuplicateDirectory
+	public void createNewDirectory(String userId, String filesystemId, String filesystemVersion, String directoryPath, String directoryName, Map<String, Object> directoryProperties) throws UserNotFound, FilesystemNotFound, DuplicateDirectory
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
@@ -58,14 +58,14 @@ public class DirectoryServiceImpl implements DirectoryService
 				}
 				
 				Node rootDirectory = commonCode.getRootDirectory(userId, filesystemId);
-				rootDirectory.createRelationshipTo(node, RelationshipLabels.has).setProperty(MandatoryProperties.commitId.name(), commitId);
+				rootDirectory.createRelationshipTo(node, RelationshipLabels.has).setProperty(MandatoryProperties.commitId.name(), filesystemVersion);
 				transaction.success();
 			}
 		}
 	}
 	
 	@Override
-	public void createNewVersion(String commitId, String userId, String filesystemId, String directoryPath, String directoryName, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound
+	public void createNewVersion(String userId, String filesystemId, String filesystemVersion, String directoryPath, String directoryName, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
@@ -92,14 +92,14 @@ public class DirectoryServiceImpl implements DirectoryService
 			{
 				relationship.setProperty(entry.getKey(), entry.getValue());
 			}
-			relationship.setProperty(MandatoryProperties.commitId.name(), commitId);
+			relationship.setProperty(MandatoryProperties.commitId.name(), filesystemVersion);
 			
 			transaction.success();
 		}
 	}
 	
 	@Override
-	public void deleteDirectoryTemporarily(String commitId, String userId, String filesystemId, String directoryPath, String directoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound
+	public void deleteDirectoryTemporarily(String userId, String filesystemId, String filesystemVersion, String directoryPath, String directoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
@@ -112,7 +112,7 @@ public class DirectoryServiceImpl implements DirectoryService
 			{
 				hadRelationship.setProperty(key, hasRelationship.getProperty(key));
 			}
-			hadRelationship.setProperty(MandatoryProperties.commitId.name(), commitId);
+			hadRelationship.setProperty(MandatoryProperties.commitId.name(), filesystemVersion);
 			
 			hasRelationship.delete();
 			transaction.success();
@@ -120,7 +120,7 @@ public class DirectoryServiceImpl implements DirectoryService
 	}
 	
 	@Override
-	public void restoreTemporaryDeletedDirectory(String commitId, String userId, String filesystemId, String directoryPath, String directoryName, String previousCommitId) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateDirectory
+	public void restoreTemporaryDeletedDirectory(String userId, String filesystemId, String filesystemVersion, String directoryPath, String directoryName, String previousfilesystemVersion) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateDirectory
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
@@ -132,7 +132,7 @@ public class DirectoryServiceImpl implements DirectoryService
 			}
 			catch(DirectoryNotFound directoryNotFound)
 			{
-				Node directory = commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, true, previousCommitId);
+				Node directory = commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, true, previousfilesystemVersion);
 				Relationship hadRelationship = directory.getSingleRelationship(RelationshipLabels.had, Direction.INCOMING);
 				Node parentDirectory = hadRelationship.getStartNode();
 				
@@ -141,7 +141,7 @@ public class DirectoryServiceImpl implements DirectoryService
 				{
 					hasRelationship.setProperty(key, hadRelationship.getProperty(key));
 				}
-				hasRelationship.setProperty(MandatoryProperties.commitId.name(), commitId);
+				hasRelationship.setProperty(MandatoryProperties.commitId.name(), filesystemVersion);
 				
 				hadRelationship.delete();
 				transaction.success();
@@ -150,7 +150,7 @@ public class DirectoryServiceImpl implements DirectoryService
 	}
 	
 	@Override
-	public void moveDirectory(String commitId, String userId, String filesystemId, String oldDirectoryPath, String oldDirectoryName, String newDirectoryPath, String newDirectoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateDirectory
+	public void moveDirectory(String userId, String filesystemId, String filesystemVersion, String oldDirectoryPath, String oldDirectoryName, String newDirectoryPath, String newDirectoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateDirectory
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
@@ -165,11 +165,11 @@ public class DirectoryServiceImpl implements DirectoryService
 			}
 			catch (VersionNotFound e) {}
 			
-			this.deleteDirectoryTemporarily(commitId, userId, filesystemId, oldDirectoryPath, oldDirectoryName);
-			this.createNewDirectory(commitId, newDirectoryPath, newDirectoryName, filesystemId, userId, directoryProperties);
+			this.deleteDirectoryTemporarily(filesystemVersion, userId, filesystemId, oldDirectoryPath, oldDirectoryName);
+			this.createNewDirectory(filesystemVersion, newDirectoryPath, newDirectoryName, filesystemId, userId, directoryProperties);
 			
 			CommonCode commonCode = new CommonCode();
-			Node oldDirectory = commonCode.getDirectory(userId, filesystemId, oldDirectoryPath, oldDirectoryName, true, commitId);
+			Node oldDirectory = commonCode.getDirectory(userId, filesystemId, oldDirectoryPath, oldDirectoryName, true, filesystemVersion);
 			Node newDirectory = commonCode.getDirectory(userId, filesystemId, newDirectoryPath, newDirectoryName, false, null);
 			for(Relationship oldRelationship : oldDirectory.getRelationships(Direction.OUTGOING))
 			{

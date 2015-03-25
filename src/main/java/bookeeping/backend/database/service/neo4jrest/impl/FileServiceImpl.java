@@ -15,110 +15,79 @@ import bookeeping.backend.database.connection.singleton.Neo4JRestConnection;
 import bookeeping.backend.database.neo4j.NodeLabels;
 import bookeeping.backend.database.neo4j.RelationshipLabels;
 import bookeeping.backend.database.service.FileService;
+import bookeeping.backend.database.service.GenericService;
 import bookeeping.backend.exception.DirectoryNotFound;
 import bookeeping.backend.exception.DuplicateFile;
 import bookeeping.backend.exception.FileNotFound;
 import bookeeping.backend.exception.FilesystemNotFound;
+import bookeeping.backend.exception.NodeNotFound;
+import bookeeping.backend.exception.NodeUnavailable;
 import bookeeping.backend.exception.UserNotFound;
 import bookeeping.backend.exception.VersionNotFound;
-import bookeeping.backend.file.FilePermission;
 
 public class FileServiceImpl implements FileService
 {
 	private Neo4JRestConnection neo4jRestConnection;
 	private GraphDatabaseService graphDatabaseService;
+	private CommonCode commonCode;
 	
 	public FileServiceImpl()
 	{
 		this.neo4jRestConnection = Neo4JRestConnection.getInstance();
 		this.graphDatabaseService = this.neo4jRestConnection.getGraphDatabaseServiceObject();
+		this.commonCode = new CommonCode();
 	}
 
 	@Override
-	public void createNewFile(String commitId, String filePath, String fileName, String filesystemId, String userId, Map<String, Object> fileProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateFile
+	public String createNewFile(String commitId, String userId, String filesystemId, int filesystemVersion, String filePath, String fileName, Map<String, Object> fileProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, VersionNotFound, DuplicateFile
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			Node parentDirectory = null;
 			try
 			{
-				CommonCode commonCode = new CommonCode();
-				if(filePath.equals("/"))
-				{
-					parentDirectory = commonCode.getRootDirectory(userId, filesystemId);
-				}
-				else
-				{
-					String directoryName = filePath.substring(filePath.lastIndexOf("/") + 1, filePath.length());
-					String directoryPath = filePath.substring(0, filePath.lastIndexOf("/" + directoryName));
-					directoryPath = directoryPath.length() == 0 ? "/" : directoryPath;
-					parentDirectory = commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, false, null);
-				}
-				
-				commonCode.getFile(userId, filesystemId, filePath, fileName, false, null);
-				throw new DuplicateFile("ERROR: File already present! - \"" + filePath + "/" + fileName + "\"");
+				this.commonCode.getFile(userId, filesystemId, filesystemVersion, filePath, fileName);
+				throw new DuplicateFile("ERROR: File already present! - \"" + (filePath.equals("/") ? "" : filePath) + "/" + fileName + "\"");
 			}
 			catch(FileNotFound fileNotFound)
 			{
-				Node node = this.graphDatabaseService.createNode(NodeLabels.File);
-				node.setProperty(MandatoryProperties.nodeId.name(), new AutoIncrementServiceImpl().getNextAutoIncrement());
-				node.setProperty(MandatoryProperties.filePath.name(), filePath);
-				node.setProperty(MandatoryProperties.fileName.name(), fileName);
-				node.setProperty(MandatoryProperties.version.name(), 0);
+				String directoryName = filePath.substring(filePath.lastIndexOf("/") + 1, filePath.length());
+				String directoryPath = filePath.substring(0, filePath.lastIndexOf("/" + directoryName));
+				
+				Node parentDirectory = null;
+				if(directoryPath.length() == 0)
+				{
+					parentDirectory = this.commonCode.getRootDirectory(userId, filesystemId, filesystemVersion);
+				}
+				else
+				{
+					parentDirectory = this.commonCode.getDirectory(userId, filesystemId, filesystemVersion, directoryPath, directoryName);
+				}
+				
+				Node file = this.commonCode.createNode(NodeLabels.File);
+				file.setProperty(MandatoryProperties.filePath.name(), filePath);
+				file.setProperty(MandatoryProperties.fileName.name(), fileName);
+				file.setProperty(MandatoryProperties.version.name(), 0);
+				String fileNodeId = (String) file.getProperty(MandatoryProperties.nodeId.name());
 				
 				for(Entry<String, Object> filePropertiesEntry : fileProperties.entrySet())
 				{
-					node.setProperty(filePropertiesEntry.getKey(), filePropertiesEntry.getValue());
+					file.setProperty(filePropertiesEntry.getKey(), filePropertiesEntry.getValue());
 				}
 				
-				parentDirectory.createRelationshipTo(node, RelationshipLabels.has).setProperty(MandatoryProperties.commitId.name(), commitId);
+				parentDirectory.createRelationshipTo(file, RelationshipLabels.has).setProperty(MandatoryProperties.commitId.name(), commitId);
 				transaction.success();
+				return fileNodeId;
 			}
 		}
 	}
 	
 	@Override
-	public void createNewVersion(String commitId, String userId, String filesystemId, String filePath, String fileName, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound
+	public void shareFile(String commitId, String userId, String filesystemId, int filesystemVersion, String filePath, String fileName, String shareWithUserId, String filePermission) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			CommonCode commonCode = new CommonCode();
-			Node file = null;
-			try
-			{
-				file = commonCode.getVersion("file", userId, filesystemId, filePath, fileName, -1, false, null);
-			}
-			catch (VersionNotFound e) {}
-			Node versionedFile = commonCode.copyNode(file);
-			
-			int fileLatestVersion = (int) file.getProperty(MandatoryProperties.version.name());
-			versionedFile.setProperty(MandatoryProperties.version.name(), fileLatestVersion + 1);
-			for(Entry<String, Object> entry : changedProperties.entrySet())
-			{
-				versionedFile.setProperty(entry.getKey(), entry.getValue());
-			}
-			versionedFile.removeProperty(MandatoryProperties.filePath.name());
-			versionedFile.removeProperty(MandatoryProperties.fileName.name());
-			
-			Relationship relationship = file.createRelationshipTo(versionedFile, RelationshipLabels.hasVersion);
-			for(Entry<String, Object> entry : changeMetadata.entrySet())
-			{
-				relationship.setProperty(entry.getKey(), entry.getValue());
-			}
-			relationship.setProperty(MandatoryProperties.commitId.name(), commitId);
-			
-			transaction.success();
-		}
-	}
-	
-	@Override
-	public void shareFile(String commitId, String userId, String filesystemId, String filePath, String fileName, String shareWithUserId, FilePermission filePermission) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound
-	{
-		try(Transaction transaction = this.graphDatabaseService.beginTx())
-		{
-			CommonCode commonCode = new CommonCode();
-			Node beneficiaryUser = commonCode.getUser(shareWithUserId);
-			Node fileToBeShared = commonCode.getFile(userId, filesystemId, filePath, fileName, false, null);
+			Node beneficiaryUser = this.commonCode.getUser(shareWithUserId);
+			Node fileToBeShared = this.commonCode.getFile(userId, filesystemId, filesystemVersion, filePath, fileName);
 			
 			for(Relationship relationship : beneficiaryUser.getRelationships(Direction.OUTGOING, RelationshipLabels.hasAccess))
 			{
@@ -130,7 +99,7 @@ public class FileServiceImpl implements FileService
 			}
 			
 			Relationship newRelationship = beneficiaryUser.createRelationshipTo(fileToBeShared, RelationshipLabels.hasAccess);
-			newRelationship.setProperty(MandatoryProperties.permission.name(), filePermission.name());
+			newRelationship.setProperty(MandatoryProperties.permission.name(), filePermission);
 			newRelationship.setProperty(MandatoryProperties.commitId.name(), commitId);
 			
 			transaction.success();
@@ -138,13 +107,12 @@ public class FileServiceImpl implements FileService
 	}
 	
 	@Override
-	public void unshareFile(String commitId, String userId, String filesystemId, String filePath, String fileName, String unshareWithUserId) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound
+	public void unshareFile(String commitId, String userId, String filesystemId, int filesystemVersion, String filePath, String fileName, String unshareWithUserId) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			CommonCode commonCode = new CommonCode();
-			Node beneficiaryUser = commonCode.getUser(unshareWithUserId);
-			Node fileToBeShared = commonCode.getFile(userId, filesystemId, filePath, fileName, false, null);
+			Node beneficiaryUser = this.commonCode.getUser(unshareWithUserId);
+			Node fileToBeShared = this.commonCode.getFile(userId, filesystemId, filesystemVersion, filePath, fileName);
 			
 			Relationship hadAccessRelationship = beneficiaryUser.createRelationshipTo(fileToBeShared, RelationshipLabels.hadAccess);
 			for(Relationship hasAccessRelationship : beneficiaryUser.getRelationships(Direction.OUTGOING, RelationshipLabels.hasAccess))
@@ -167,84 +135,53 @@ public class FileServiceImpl implements FileService
 	}
 	
 	@Override
-	public void deleteFileTemporarily(String commitId, String userId, String filesystemId, String filePath, String fileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound
+	public void restoreFile(String commitId, String userId, String filesystemId, int filesystemVersion, String filePath, String fileName, String nodeIdToBeRestored) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound, DuplicateFile, NodeNotFound, NodeUnavailable
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			Node file = new CommonCode().getFile(userId, filesystemId, filePath, fileName, false, null);
-			Relationship hasRelationship = file.getSingleRelationship(RelationshipLabels.has, Direction.INCOMING);
-			Node parentDirectory = hasRelationship.getStartNode();
-			
-			Relationship hadRelationship = parentDirectory.createRelationshipTo(file, RelationshipLabels.had);
-			for(String key : hasRelationship.getPropertyKeys())
-			{
-				hadRelationship.setProperty(key, hasRelationship.getProperty(key));
-			}
-			hadRelationship.setProperty(MandatoryProperties.commitId.name(), commitId);
-			
-			hasRelationship.delete();
-			transaction.success();
-		}
-	}
-	
-	@Override
-	public void restoreTemporaryDeletedFile(String commitId, String userId, String filesystemId, String filePath, String fileName, String previousCommitId) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, DuplicateFile
-	{
-		try(Transaction transaction = this.graphDatabaseService.beginTx())
-		{
-			CommonCode commonCode = new CommonCode();
 			try
 			{
-				commonCode.getFile(userId, filesystemId, filePath, fileName, false, null);
-				throw new DuplicateFile("ERROR: File already present! - \"" + filePath + "/" + fileName + "\"");
+				this.commonCode.getFile(userId, filesystemId, filesystemVersion, filePath, fileName);
+				throw new DuplicateFile("ERROR: File already present! - \"" + (filePath.equals("/") ? "" : filePath) + "/" + fileName + "\"");
 			}
 			catch(FileNotFound fileNotFound)
 			{
-				Node file = commonCode.getFile(userId, filesystemId, filePath, fileName, true, previousCommitId);
-				Relationship hadRelationship = file.getSingleRelationship(RelationshipLabels.had, Direction.INCOMING);
-				Node parentDirectory = hadRelationship.getStartNode();
-				
-				Relationship hasRelationship = parentDirectory.createRelationshipTo(file, RelationshipLabels.has);
-				for(String key : hadRelationship.getPropertyKeys())
-				{
-					hasRelationship.setProperty(key, hadRelationship.getProperty(key));
-				}
-				hasRelationship.setProperty(MandatoryProperties.commitId.name(), commitId);
-				
-				hadRelationship.delete();
+				this.commonCode.restoreNode(commitId, nodeIdToBeRestored);
 				transaction.success();
 			}
 		}
 	}
 	
 	@Override
-	public void moveFile(String commitId, String userId, String filesystemId, String oldFilePath, String oldFileName, String newFilePath, String newFileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, DuplicateFile
+	public String moveFile(String commitId, String userId, String filesystemId, int filesystemVersion, String oldFilePath, String oldFileName, String newFilePath, String newFileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound, DuplicateFile
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			Map<String, Object> fileProperties = null;
+			Map<String, Object> fileProperties = this.getFile(userId, filesystemId, filesystemVersion, oldFilePath, oldFileName);
+			String nodeId = (String) fileProperties.remove(MandatoryProperties.nodeId.name());
+			fileProperties.remove(MandatoryProperties.filePath.name());
+			fileProperties.remove(MandatoryProperties.fileName.name());
+			fileProperties.remove(MandatoryProperties.version.name());
+			
+			GenericService genericService = new GenericServiceImpl();
 			try
 			{
-				fileProperties = this.getFile(userId, filesystemId, oldFilePath, oldFileName, -1);
-				fileProperties.remove(MandatoryProperties.nodeId.name());
-				fileProperties.remove(MandatoryProperties.filePath.name());
-				fileProperties.remove(MandatoryProperties.fileName.name());
-				fileProperties.remove(MandatoryProperties.version.name());
+				genericService.deleteNodeTemporarily(commitId, nodeId);
 			}
-			catch (VersionNotFound e) {}
+			catch (NodeNotFound | NodeUnavailable e) {}
 			
-			this.deleteFileTemporarily(commitId, userId, filesystemId, oldFilePath, oldFileName);
-			this.createNewFile(commitId, newFilePath, newFileName, filesystemId, userId, fileProperties);
+			String fileNodeId = this.createNewFile(commitId, userId, filesystemId, filesystemVersion, newFilePath, newFileName, fileProperties);
 			transaction.success();
+			return fileNodeId;
 		}
 	}
 
 	@Override
-	public Map<String, Object> getFile(String userId, String filesystemId, String filePath, String fileName, int version) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
+	public Map<String, Object> getFile(String userId, String filesystemId, int filesystemVersion, String filePath, String fileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
-			Node file = new CommonCode().getVersion("file", userId, filesystemId, filePath, fileName, version, false, null);
+			Node file = this.commonCode.getFile(userId, filesystemId, filesystemVersion, filePath, fileName);
 			Map<String, Object> fileProperties = new HashMap<String, Object>();
 			
 			Iterable<String> keys = file.getPropertyKeys();

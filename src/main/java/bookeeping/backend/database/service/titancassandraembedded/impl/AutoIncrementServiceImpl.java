@@ -1,10 +1,9 @@
 package bookeeping.backend.database.service.titancassandraembedded.impl;
 
-import java.util.Iterator;
-
 import bookeeping.backend.database.MandatoryProperties;
 import bookeeping.backend.database.connection.singleton.TitanCassandraEmbeddedConnection;
 import bookeeping.backend.database.service.AutoIncrementService;
+import bookeeping.backend.exception.NodeNotFound;
 import bookeeping.backend.utilities.AlphaNumericOperation;
 
 import com.thinkaurelius.titan.core.TitanGraph;
@@ -14,10 +13,12 @@ import com.tinkerpop.blueprints.Vertex;
 public class AutoIncrementServiceImpl implements AutoIncrementService
 {
 	private TitanGraph titanGraph;
+	private CommonCode commonCode;
 	
 	public AutoIncrementServiceImpl()
 	{
 		this.titanGraph = TitanCassandraEmbeddedConnection.getInstance().getTitanGraphObject();
+		this.commonCode = new CommonCode();
 	}
 	
 	@Override
@@ -27,18 +28,17 @@ public class AutoIncrementServiceImpl implements AutoIncrementService
 		
 		try
 		{
-			Iterator<Vertex> iterator = this.titanGraph.getVertices(MandatoryProperties.nodeId.name(), "0").iterator();
 			Vertex autoIncrement = null;
-			while(iterator.hasNext())
+			try
 			{
-				autoIncrement = iterator.next();
+				autoIncrement = this.commonCode.getNode("0");
 			}
-			
-			String nextIncrement = autoIncrement.getProperty(MandatoryProperties.next.name());
-			autoIncrement.setProperty(MandatoryProperties.next.name(), AlphaNumericOperation.add(nextIncrement, 1));
+			catch (NodeNotFound e) {}
+			String nextAutoIncrement = (String) autoIncrement.getProperty(MandatoryProperties.next.name());
+			autoIncrement.setProperty(MandatoryProperties.next.name(), AlphaNumericOperation.add(nextAutoIncrement, 1));
 			
 			titanTransaction.commit();
-			return nextIncrement;
+			return nextAutoIncrement;
 		}
 		finally
 		{

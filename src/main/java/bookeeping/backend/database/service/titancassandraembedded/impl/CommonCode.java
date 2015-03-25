@@ -3,6 +3,8 @@ package bookeeping.backend.database.service.titancassandraembedded.impl;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import bookeeping.backend.database.MandatoryProperties;
 import bookeeping.backend.database.connection.singleton.TitanCassandraEmbeddedConnection;
@@ -11,6 +13,8 @@ import bookeeping.backend.database.titan.RelationshipLabels;
 import bookeeping.backend.exception.DirectoryNotFound;
 import bookeeping.backend.exception.FileNotFound;
 import bookeeping.backend.exception.FilesystemNotFound;
+import bookeeping.backend.exception.NodeNotFound;
+import bookeeping.backend.exception.NodeUnavailable;
 import bookeeping.backend.exception.UserNotFound;
 import bookeeping.backend.exception.VersionNotFound;
 
@@ -29,6 +33,139 @@ public class CommonCode
 		this.titanGraph = TitanCassandraEmbeddedConnection.getInstance().getTitanGraphObject();
 	}
 	
+	public Vertex createNode(NodeLabels nodeLabel)
+	{
+		Vertex node = this.titanGraph.addVertexWithLabel(nodeLabel.name());
+		node.setProperty(MandatoryProperties.nodeId.name(), new AutoIncrementServiceImpl().getNextAutoIncrement());
+		return node;
+	}
+	
+	public Vertex getNode(String nodeId) throws NodeNotFound
+	{
+		Iterator<Vertex> iterator = this.titanGraph.getVertices(MandatoryProperties.nodeId.name(), nodeId).iterator();
+		if(iterator.hasNext())
+		{
+			return iterator.next();
+		}
+		else
+		{
+			throw new NodeNotFound("ERROR: Node not found! - \"" + nodeId + "\"");
+		}
+	}
+	
+	public Vertex createNodeVersion(String commidId, String nodeId, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws NodeNotFound
+	{
+		Vertex node = null;
+		try
+		{
+			node = this.getNodeVersion(nodeId, -1);
+		}
+		catch (VersionNotFound e) {}
+		Vertex versionedNode = this.copyNodeTree(node, new ArrayList<String>());
+		
+		int nodeVersion = (int) node.getProperty(MandatoryProperties.version.name());
+		versionedNode.setProperty(MandatoryProperties.version.name(), nodeVersion + 1);
+		for(Entry<String, Object> entry : changedProperties.entrySet())
+		{
+			versionedNode.setProperty(entry.getKey(), entry.getValue());
+		}
+		
+		Edge relationship = node.addEdge(RelationshipLabels.hasVersion.name(), versionedNode);
+		for(Entry<String, Object> entry : changeMetadata.entrySet())
+		{
+			relationship.setProperty(entry.getKey(), entry.getValue());
+		}
+		relationship.setProperty(MandatoryProperties.commitId.name(), commidId);
+		
+		return versionedNode;
+	}
+	
+	public Vertex getNodeVersion(String nodeId, int version) throws NodeNotFound, VersionNotFound
+	{
+		Vertex node = this.getNode(nodeId);
+		do
+		{
+			if((int) node.getProperty(MandatoryProperties.version.name()) == version)
+			{
+				return node;
+			}
+			else
+			{
+				Iterator<Edge> iterator = node.getEdges(Direction.OUT, RelationshipLabels.hasVersion.name()).iterator();
+				if(iterator.hasNext())
+				{
+					node = iterator.next().getVertex(Direction.IN);
+				}
+				else
+				{
+					if(version == -1)
+					{
+						return node;
+					}
+					else
+					{
+						node = null;
+					}
+				}
+			}
+		}
+		while(node != null);
+		
+		throw new VersionNotFound("ERROR: Node version not found! - \"" + nodeId + "(v=" + version + ")\"");
+	}
+	
+	public Vertex deleteNodeTemporarily(String commitId, String nodeId) throws NodeNotFound, NodeUnavailable
+	{
+		Vertex node = this.getNode(nodeId);
+		Edge hasRelationship = null;
+		Iterator<Edge> iterator = node.getEdges(Direction.IN, RelationshipLabels.has.name()).iterator();
+		if(! iterator.hasNext())
+		{
+			throw new NodeUnavailable("ERROR: Node is unavailable! - \"" + nodeId + "\". Could be it has already been deleted.");
+		}
+		else
+		{
+			hasRelationship = iterator.next();
+		}
+		
+		Vertex parentNode = hasRelationship.getVertex(Direction.OUT);
+		Edge hadRelationship = parentNode.addEdge(RelationshipLabels.had.name(), node);
+		for(String key : hasRelationship.getPropertyKeys())
+		{
+			hadRelationship.setProperty(key, hasRelationship.getProperty(key));
+		}
+		hadRelationship.setProperty(MandatoryProperties.commitId.name(), commitId);
+		
+		hasRelationship.remove();
+		return node;
+	}
+	
+	public Vertex restoreNode(String commitId, String nodeId) throws NodeNotFound, NodeUnavailable
+	{
+		Vertex node = this.getNode(nodeId);
+		Edge hadRelationship = null;
+		Iterator<Edge> iterator = node.getEdges(Direction.IN, RelationshipLabels.had.name()).iterator();
+		if(! iterator.hasNext())
+		{
+			throw new NodeUnavailable("ERROR: Node is unavailable! - \"" + nodeId + "\". Could be it has not been deleted.");
+		}
+		else
+		{
+			hadRelationship = iterator.next();
+		}
+		
+		Vertex parentNode = hadRelationship.getVertex(Direction.OUT);
+		Edge hasRelationship = parentNode.addEdge(RelationshipLabels.has.name(), node);
+		for(String key : hadRelationship.getPropertyKeys())
+		{
+			hasRelationship.setProperty(key, hadRelationship.getProperty(key));
+		}
+		hasRelationship.setProperty(MandatoryProperties.commitId.name(), commitId);
+		
+		hadRelationship.remove();
+		return node;
+	}
+	
 	public Vertex getUser(String userId) throws UserNotFound
 	{
 		Iterator<Vertex> iterator = this.titanGraph.getVertices(MandatoryProperties.userId.name(), userId).iterator();
@@ -42,170 +179,120 @@ public class CommonCode
 		}
 	}
 	
-	public Vertex getFilesystem(String userId, String filesystemId, boolean deleted) throws FilesystemNotFound, UserNotFound
+	public Vertex getFilesystem(String userId, String filesystemId) throws UserNotFound, FilesystemNotFound
 	{
 		Vertex user = this.getUser(userId);
-		Iterable<Vertex> iterable;
+		Iterable<Edge> iterable = user.getEdges(Direction.OUT, RelationshipLabels.has.name());
 		
-		if(deleted)
+		for(Edge relationship : iterable)
 		{
-			iterable = user.getVertices(Direction.OUT, RelationshipLabels.had.name());
-		}
-		else
-		{
-			iterable = user.getVertices(Direction.OUT, RelationshipLabels.has.name());
-		}
-		
-		for(Vertex vertex : iterable)
-		{
-			String retrievedFilesystemId = vertex.getProperty(MandatoryProperties.filesystemId.name());
+			Vertex filesystem = relationship.getVertex(Direction.IN);
+			String retrievedFilesystemId = (String) filesystem.getProperty(MandatoryProperties.filesystemId.name());
+			
 			if(retrievedFilesystemId.equals(filesystemId))
 			{
-				return vertex;
+				return filesystem;
 			}
 		}
 		
 		throw new FilesystemNotFound("ERROR: Filesystem not found! - \"" + filesystemId + "\"");
 	}
 	
-	public Vertex getRootDirectory(String userId, String filesystemId) throws FilesystemNotFound, UserNotFound
+	public Vertex getRootDirectory(String userId, String filesystemId, int filesystemVersion) throws UserNotFound, FilesystemNotFound, VersionNotFound
 	{
-		Vertex filesystem = this.getFilesystem(userId, filesystemId, false);
-		return filesystem.getVertices(Direction.OUT, RelationshipLabels.has.name()).iterator().next();
+		Vertex filesystem = this.getFilesystem(userId, filesystemId);
+		Vertex versionedFilesystem = null;
+		try
+		{
+			versionedFilesystem = this.getNodeVersion((String) filesystem.getProperty(MandatoryProperties.nodeId.name()), filesystemVersion);
+		}
+		catch (NodeNotFound e) {}
+		return versionedFilesystem.getEdges(Direction.OUT, RelationshipLabels.has.name()).iterator().next().getVertex(Direction.IN);
 	}
 	
-	public Vertex getDirectory(String userId, String filesystemId, String directoryPath, String directoryName, boolean deleted, String commitId) throws FilesystemNotFound, UserNotFound, DirectoryNotFound
+	public Vertex getDirectory(String userId, String filesystemId, int filesystemVersion, String directoryPath, String directoryName) throws UserNotFound, FilesystemNotFound, VersionNotFound, DirectoryNotFound
 	{
-		Vertex rootDirectory = this.getRootDirectory(userId, filesystemId);
-		Iterable<Vertex> iterable;
-		if(deleted)
-		{
-			iterable = rootDirectory.getVertices(Direction.OUT, RelationshipLabels.had.name());
-		}
-		else
-		{
-			iterable = rootDirectory.getVertices(Direction.OUT, RelationshipLabels.has.name());
-		}
+		Vertex rootDirectory = this.getRootDirectory(userId, filesystemId, filesystemVersion);
+		Iterable<Edge> iterable = rootDirectory.getEdges(Direction.OUT, RelationshipLabels.has.name());
 		
-		for(Vertex vertex : iterable)
+		for(Edge relationship : iterable)
 		{
-			String retrievedDirectoryPath = vertex.getProperty(MandatoryProperties.directoryPath.name());
-			String retrievedDirectoryName = vertex.getProperty(MandatoryProperties.directoryName.name());
-			String retrievedCommitId = vertex.getProperty(MandatoryProperties.commitId.name());
-			
-			if(retrievedDirectoryPath.equals(directoryPath) && retrievedDirectoryName.equals(directoryName) && (commitId == null ? true : retrievedCommitId.equals(commitId)))
+			Vertex node = relationship.getVertex(Direction.IN);
+			TitanVertex vertex = (TitanVertex) node;
+			if(vertex.getLabel().equals(NodeLabels.Directory.name()))
 			{
-				return vertex;
+				String retrievedDirectoryPath = (String) node.getProperty(MandatoryProperties.directoryPath.name());
+				String retrievedDirectoryName = (String) node.getProperty(MandatoryProperties.directoryName.name());
+				
+				if(retrievedDirectoryPath.equals(directoryPath) && retrievedDirectoryName.equals(directoryName))
+				{
+					return node;
+				}
 			}
 		}
 		
 		throw new DirectoryNotFound("ERROR: Directory not found! - \"" + (directoryPath.equals("/") ? "" : directoryPath) + "/" + directoryName + "\"");
 	}
 	
-	public Vertex getFile(String userId, String filesystemId, String filePath, String fileName, boolean deleted, String commitId) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, FileNotFound
+	public List<Vertex> getAllDirectory(String userId, String filesystemId, int filesystemVersion) throws UserNotFound, FilesystemNotFound, VersionNotFound
+	{
+		List<Vertex> directoryList = new ArrayList<Vertex>();
+		Vertex rootDirectory = this.getRootDirectory(userId, filesystemId, filesystemVersion);
+		Iterable<Edge> iterable = rootDirectory.getEdges(Direction.OUT, RelationshipLabels.has.name());
+		
+		for(Edge relationship : iterable)
+		{
+			Vertex node = relationship.getVertex(Direction.IN);
+			TitanVertex vertex = (TitanVertex) node;
+			if(vertex.getLabel().equals(NodeLabels.Directory.name()))
+			{
+				directoryList.add(node);
+			}
+		}
+		
+		return directoryList;
+	}
+	
+	public Vertex getFile(String userId, String filesystemId, int filesystemVersion, String filePath, String fileName) throws UserNotFound, FilesystemNotFound, VersionNotFound, DirectoryNotFound, FileNotFound
 	{
 		Vertex parentDirectory = null;
 		if(filePath.equals("/"))
 		{
-			parentDirectory = this.getRootDirectory(userId, filesystemId);
+			parentDirectory = this.getRootDirectory(userId, filesystemId, filesystemVersion);
 		}
 		else
 		{
 			String directoryName = filePath.substring(filePath.lastIndexOf("/") + 1, filePath.length());
 			String directoryPath = filePath.substring(0, filePath.lastIndexOf("/" + directoryName));
 			directoryPath = directoryPath.length() == 0 ? "/" : directoryPath;
-			parentDirectory = this.getDirectory(userId, filesystemId, directoryPath, directoryName, false, null);
+			parentDirectory = this.getDirectory(userId, filesystemId, filesystemVersion, directoryPath, directoryName);
 		}
 		
-		Iterable<Vertex> iterable;
-		if(deleted)
+		Iterable<Edge> iterable = parentDirectory.getEdges(Direction.OUT, RelationshipLabels.has.name());
+		for(Edge relationship : iterable)
 		{
-			iterable = parentDirectory.getVertices(Direction.OUT, RelationshipLabels.had.name());
-		}
-		else
-		{
-			iterable = parentDirectory.getVertices(Direction.OUT, RelationshipLabels.has.name());
-		}
-		
-		for(Vertex vertex : iterable)
-		{
-			String retrievedFilePath = vertex.getProperty(MandatoryProperties.filePath.name());
-			String retrievedFileName = vertex.getProperty(MandatoryProperties.fileName.name());
-			String retrievedCommitId = vertex.getProperty(MandatoryProperties.commitId.name());
-			
-			if(retrievedFilePath.equals(filePath) && retrievedFileName.equals(fileName) && (commitId == null ? true : retrievedCommitId.equals(commitId)))
+			Vertex node = relationship.getVertex(Direction.IN);
+			TitanVertex vertex = (TitanVertex) node;
+			if(vertex.getLabel().equals(NodeLabels.File.name()))
 			{
-				return vertex;
+				String retrievedFilePath = (String) node.getProperty(MandatoryProperties.filePath.name());
+				String retrievedFileName = (String) node.getProperty(MandatoryProperties.fileName.name());
+				
+				if(retrievedFilePath.equals(filePath) && retrievedFileName.equals(fileName))
+				{
+					return node;
+				}
 			}
 		}
 		
 		throw new FileNotFound("ERROR: File not found! - \"" + (filePath.equals("/") ? "" : filePath) + "/" + fileName + "\"");
 	}
 	
-	public Vertex getVersion(String nodeType, String userId, String filesystemId, String path, String name, int version, boolean deleted, String commitId) throws FilesystemNotFound, UserNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
-	{
-		Vertex node = null;
-		if(nodeType.equalsIgnoreCase("filesystem"))
-		{
-			node = this.getFilesystem(userId, filesystemId, deleted);
-		}
-		else if(nodeType.equalsIgnoreCase("directory"))
-		{
-			node = this.getDirectory(userId, filesystemId, path, name, deleted, commitId);
-		}
-		else
-		{
-			node = this.getFile(userId, filesystemId, path, name, deleted, commitId);
-		}
-		
-		do
-		{
-			if(version != -1)
-			{
-				int retrievedVersion = (int) node.getProperty(MandatoryProperties.version.name());
-				if(retrievedVersion == version)
-				{
-					return node;
-				}
-			}
-			
-			Iterator<Vertex> iterator = node.getVertices(Direction.OUT, RelationshipLabels.hasVersion.name()).iterator();
-			if(! iterator.hasNext())
-			{
-				if(version == -1)
-				{
-					return node;
-				}
-				else
-				{
-					node = null;
-				}
-			}
-			else
-			{
-				node = iterator.next();
-			}
-		}
-		while(node != null);
-		
-		if(nodeType.equalsIgnoreCase("filesystem"))
-		{
-			throw new VersionNotFound("ERROR: Version not found! - Filesystem: \"" + filesystemId + "\", Version - \"" + version + "\"");
-		}
-		else if(nodeType.equalsIgnoreCase("directory"))
-		{
-			throw new VersionNotFound("ERROR: Version not found! - Directory: \"" + path + "/" + name + "\", Version - \"" + version + "\"");
-		}
-		else
-		{
-			throw new VersionNotFound("ERROR: Version not found! - File: \"" + path + "/" + name + "\", Version - \"" + version + "\"");
-		}
-	}
-	
 	public Vertex copyNode(Vertex node)
 	{
-		TitanVertex titanVertex = (TitanVertex) node;
-		Vertex copyNode = this.titanGraph.addVertexWithLabel(titanVertex.getLabel());
+		TitanVertex vertex = (TitanVertex) node;
+		Vertex copyNode = this.createNode(NodeLabels.valueOf(vertex.getLabel()));
+		
 		for(String key : node.getPropertyKeys())
 		{
 			if(! key.equals(MandatoryProperties.nodeId.name()))
@@ -213,12 +300,11 @@ public class CommonCode
 				copyNode.setProperty(key, node.getProperty(key));
 			}
 		}
-		copyNode.setProperty(MandatoryProperties.nodeId.name(), new AutoIncrementServiceImpl().getNextAutoIncrement());
 		
 		return copyNode;
 	}
 	
-	public Vertex copyNodeTree(Vertex node)
+	public Vertex copyNodeTree(Vertex node, List<String> ignoreRelationships)
 	{
 		List<Vertex> pendingNodeList = new ArrayList<Vertex>();
 		pendingNodeList.add(node);
@@ -231,32 +317,37 @@ public class CommonCode
 		{
 			List<Vertex> childNodeList = new ArrayList<Vertex>();
 			List<Vertex> childNodeCopyList = new ArrayList<Vertex>();
-			
 			for(int i = 0; i < pendingNodeList.size(); i++)
 			{
 				Vertex currentNode = pendingNodeList.get(i);
 				Vertex currentNodeCopy = pendingNodeCopyList.get(i);
 				
-				for(NodeLabels nodeLabels : NodeLabels.values())
+				for(RelationshipLabels relationshipLabel : RelationshipLabels.values())
 				{
-					Iterable<Edge> iterable = currentNode.getEdges(Direction.OUT, nodeLabels.name());
-					for(Edge edge : iterable)
+					if(ignoreRelationships.contains(relationshipLabel.name()))
 					{
-						Vertex childNode = edge.getVertex(Direction.IN);
+						continue;
+					}
+					
+					Iterable<Edge> relationships = currentNode.getEdges(Direction.OUT, relationshipLabel.name());
+					for(Edge relationship : relationships)
+					{
+						Vertex childNode = relationship.getVertex(Direction.IN);
 						Vertex childNodeCopy = this.copyNode(childNode);
+						Edge currentNodeCopyRelationship = currentNodeCopy.addEdge(relationship.getLabel(), childNodeCopy);
 						
-						Edge currentNodeCopyRelationship = currentNodeCopy.addEdge(edge.getLabel(), childNodeCopy);
-						for(String key : edge.getPropertyKeys())
+						for(String key : relationship.getPropertyKeys())
 						{
-							currentNodeCopyRelationship.setProperty(key, edge.getProperty(key));
+							currentNodeCopyRelationship.setProperty(key, relationship.getProperty(key));
 						}
 						
 						childNodeList.add(childNode);
 						childNodeCopyList.add(childNodeCopy);
 					}
 				}
+				
 			}
-			
+
 			pendingNodeList.clear();
 			pendingNodeList.addAll(childNodeList);
 			pendingNodeCopyList.clear();

@@ -7,15 +7,17 @@ import java.util.Map.Entry;
 import bookeeping.backend.database.MandatoryProperties;
 import bookeeping.backend.database.connection.singleton.TitanCassandraEmbeddedConnection;
 import bookeeping.backend.database.service.FileService;
+import bookeeping.backend.database.service.GenericService;
 import bookeeping.backend.database.titan.NodeLabels;
 import bookeeping.backend.database.titan.RelationshipLabels;
 import bookeeping.backend.exception.DirectoryNotFound;
 import bookeeping.backend.exception.DuplicateFile;
 import bookeeping.backend.exception.FileNotFound;
 import bookeeping.backend.exception.FilesystemNotFound;
+import bookeeping.backend.exception.NodeNotFound;
+import bookeeping.backend.exception.NodeUnavailable;
 import bookeeping.backend.exception.UserNotFound;
 import bookeeping.backend.exception.VersionNotFound;
-import bookeeping.backend.file.FilePermission;
 
 import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.TitanTransaction;
@@ -26,97 +28,55 @@ import com.tinkerpop.blueprints.Vertex;
 public class FileServiceImpl implements FileService
 {
 	private TitanGraph titanGraph;
+	private CommonCode commonCode;
 	
 	public FileServiceImpl()
 	{
 		this.titanGraph = TitanCassandraEmbeddedConnection.getInstance().getTitanGraphObject();
+		this.commonCode = new CommonCode();
 	}
 	
 	@Override
-	public void createNewFile(String commitId, String filePath, String fileName, String filesystemId, String userId, Map<String, Object> fileProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateFile
+	public String createNewFile(String commitId, String userId, String filesystemId, int filesystemVersion, String filePath, String fileName, Map<String, Object> fileProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, VersionNotFound, DuplicateFile
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
-		
 		try
 		{
-			Vertex parentDirectory = null;
 			try
 			{
-				CommonCode commonCode = new CommonCode();
-				if(filePath.equals("/"))
-				{
-					parentDirectory = commonCode.getRootDirectory(userId, filesystemId);
-				}
-				else
-				{
-					String directoryName = filePath.substring(filePath.lastIndexOf("/") + 1, filePath.length());
-					String directoryPath = filePath.substring(0, filePath.lastIndexOf("/" + directoryName));
-					directoryPath = directoryPath.length() == 0 ? "/" : directoryPath;
-					parentDirectory = commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, false, null);
-				}
-				
-				commonCode.getFile(userId, filesystemId, filePath, fileName, false, null);
-				throw new DuplicateFile("ERROR: File already present! - \"" + filePath + "/" + fileName + "\"");
+				this.commonCode.getFile(userId, filesystemId, filesystemVersion, filePath, fileName);
+				throw new DuplicateFile("ERROR: File already present! - \"" + (filePath.equals("/") ? "" : filePath) + "/" + fileName + "\"");
 			}
 			catch(FileNotFound fileNotFound)
 			{
-				Vertex node = this.titanGraph.addVertexWithLabel(NodeLabels.File.name());
-				node.setProperty(MandatoryProperties.nodeId.name(), new AutoIncrementServiceImpl().getNextAutoIncrement());
-				node.setProperty(MandatoryProperties.filePath.name(), filePath);
-				node.setProperty(MandatoryProperties.fileName.name(), fileName);
-				node.setProperty(MandatoryProperties.version.name(), 0);
+				String directoryName = filePath.substring(filePath.lastIndexOf("/") + 1, filePath.length());
+				String directoryPath = filePath.substring(0, filePath.lastIndexOf("/" + directoryName));
+				
+				Vertex parentDirectory = null;
+				if(directoryPath.length() == 0)
+				{
+					parentDirectory = this.commonCode.getRootDirectory(userId, filesystemId, filesystemVersion);
+				}
+				else
+				{
+					parentDirectory = this.commonCode.getDirectory(userId, filesystemId, filesystemVersion, directoryPath, directoryName);
+				}
+				
+				Vertex file = this.commonCode.createNode(NodeLabels.File);
+				file.setProperty(MandatoryProperties.filePath.name(), filePath);
+				file.setProperty(MandatoryProperties.fileName.name(), fileName);
+				file.setProperty(MandatoryProperties.version.name(), 0);
+				String fileNodeId = (String) file.getProperty(MandatoryProperties.nodeId.name());
 				
 				for(Entry<String, Object> filePropertiesEntry : fileProperties.entrySet())
 				{
-					node.setProperty(filePropertiesEntry.getKey(), filePropertiesEntry.getValue());
+					file.setProperty(filePropertiesEntry.getKey(), filePropertiesEntry.getValue());
 				}
 				
-				parentDirectory.addEdge(RelationshipLabels.has.name(), node).setProperty(MandatoryProperties.commitId.name(), commitId);
+				parentDirectory.addEdge(RelationshipLabels.has.name(), file).setProperty(MandatoryProperties.commitId.name(), commitId);
 				titanTransaction.commit();
+				return fileNodeId;
 			}
-		}
-		finally
-		{
-			if(titanTransaction.isOpen())
-			{
-				titanTransaction.rollback();
-			}
-		}
-	}
-
-	@Override
-	public void createNewVersion(String commitId, String userId, String filesystemId, String filePath, String fileName, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound
-	{
-		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
-		
-		try
-		{
-			CommonCode commonCode = new CommonCode();
-			Vertex file = null;
-			try
-			{
-				file = commonCode.getVersion("file", userId, filesystemId, filePath, fileName, -1, false, null);
-			}
-			catch (VersionNotFound e) {}
-			Vertex versionedFile = commonCode.copyNode(file);
-			
-			int fileLatestVersion = (int) file.getProperty(MandatoryProperties.version.name());
-			versionedFile.setProperty(MandatoryProperties.version.name(), fileLatestVersion + 1);
-			for(Entry<String, Object> entry : changedProperties.entrySet())
-			{
-				versionedFile.setProperty(entry.getKey(), entry.getValue());
-			}
-			versionedFile.removeProperty(MandatoryProperties.filePath.name());
-			versionedFile.removeProperty(MandatoryProperties.fileName.name());
-			
-			Edge relationship = file.addEdge(RelationshipLabels.hasVersion.name(), versionedFile);
-			for(Entry<String, Object> entry : changeMetadata.entrySet())
-			{
-				relationship.setProperty(entry.getKey(), entry.getValue());
-			}
-			relationship.setProperty(MandatoryProperties.commitId.name(), commitId);
-			
-			titanTransaction.commit();
 		}
 		finally
 		{
@@ -128,15 +88,13 @@ public class FileServiceImpl implements FileService
 	}
 	
 	@Override
-	public void shareFile(String commitId, String userId, String filesystemId, String filePath, String fileName, String shareWithUserId, FilePermission filePermission) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound
+	public void shareFile(String commitId, String userId, String filesystemId, int filesystemVersion, String filePath, String fileName, String shareWithUserId, String filePermission) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
-		
 		try
 		{
-			CommonCode commonCode = new CommonCode();
-			Vertex beneficiaryUser = commonCode.getUser(shareWithUserId);
-			Vertex fileToBeShared = commonCode.getFile(userId, filesystemId, filePath, fileName, false, null);
+			Vertex beneficiaryUser = this.commonCode.getUser(shareWithUserId);
+			Vertex fileToBeShared = this.commonCode.getFile(userId, filesystemId, filesystemVersion, filePath, fileName);
 			
 			for(Edge relationship : beneficiaryUser.getEdges(Direction.OUT, RelationshipLabels.hasAccess.name()))
 			{
@@ -148,7 +106,7 @@ public class FileServiceImpl implements FileService
 			}
 			
 			Edge newRelationship = beneficiaryUser.addEdge(RelationshipLabels.hasAccess.name(), fileToBeShared);
-			newRelationship.setProperty(MandatoryProperties.permission.name(), filePermission.name());
+			newRelationship.setProperty(MandatoryProperties.permission.name(), filePermission);
 			newRelationship.setProperty(MandatoryProperties.commitId.name(), commitId);
 			
 			titanTransaction.commit();
@@ -163,15 +121,13 @@ public class FileServiceImpl implements FileService
 	}
 
 	@Override
-	public void unshareFile(String commitId, String userId, String filesystemId, String filePath, String fileName, String unshareWithUserId) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound
+	public void unshareFile(String commitId, String userId, String filesystemId, int filesystemVersion, String filePath, String fileName, String unshareWithUserId) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
-		
 		try
 		{
-			CommonCode commonCode = new CommonCode();
-			Vertex beneficiaryUser = commonCode.getUser(unshareWithUserId);
-			Vertex fileToBeShared = commonCode.getFile(userId, filesystemId, filePath, fileName, false, null);
+			Vertex beneficiaryUser = this.commonCode.getUser(unshareWithUserId);
+			Vertex fileToBeShared = this.commonCode.getFile(userId, filesystemId, filesystemVersion, filePath, fileName);
 			
 			Edge hadAccessRelationship = beneficiaryUser.addEdge(RelationshipLabels.hadAccess.name(), fileToBeShared);
 			for(Edge hasAccessRelationship : beneficiaryUser.getEdges(Direction.OUT, RelationshipLabels.hasAccess.name()))
@@ -199,64 +155,21 @@ public class FileServiceImpl implements FileService
 			}
 		}
 	}
-
-	@Override
-	public void deleteFileTemporarily(String commitId, String userId, String filesystemId, String filePath, String fileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound
-	{
-		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
-		
-		try
-		{
-			Vertex file = new CommonCode().getFile(userId, filesystemId, filePath, fileName, false, null);
-			Edge hasRelationship = file.getEdges(Direction.IN, RelationshipLabels.has.name()).iterator().next();
-			Vertex parentDirectory = hasRelationship.getVertex(Direction.OUT);
-			
-			Edge hadRelationship = parentDirectory.addEdge(RelationshipLabels.had.name(), file);
-			for(String key : hasRelationship.getPropertyKeys())
-			{
-				hadRelationship.setProperty(key, hasRelationship.getProperty(key));
-			}
-			hadRelationship.setProperty(MandatoryProperties.commitId.name(), commitId);
-			
-			hasRelationship.remove();
-			titanTransaction.commit();
-		}
-		finally
-		{
-			if(titanTransaction.isOpen())
-			{
-				titanTransaction.rollback();
-			}
-		}
-	}
 	
 	@Override
-	public void restoreTemporaryDeletedFile(String commitId, String userId, String filesystemId, String filePath, String fileName, String previousCommitId) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, DuplicateFile
+	public void restoreFile(String commitId, String userId, String filesystemId, int filesystemVersion, String filePath, String fileName, String nodeIdToBeRestored) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound, DuplicateFile, NodeNotFound, NodeUnavailable
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
-		
 		try
 		{
-			CommonCode commonCode = new CommonCode();
 			try
 			{
-				commonCode.getFile(userId, filesystemId, filePath, fileName, false, null);
-				throw new DuplicateFile("ERROR: File already present! - \"" + filePath + "/" + fileName + "\"");
+				this.commonCode.getFile(userId, filesystemId, filesystemVersion, filePath, fileName);
+				throw new DuplicateFile("ERROR: File already present! - \"" + (filePath.equals("/") ? "" : filePath) + "/" + fileName + "\"");
 			}
 			catch(FileNotFound fileNotFound)
 			{
-				Vertex file = commonCode.getFile(userId, filesystemId, filePath, fileName, true, previousCommitId);
-				Edge hadRelationship = file.getEdges(Direction.IN, RelationshipLabels.had.name()).iterator().next();
-				Vertex parentDirectory = hadRelationship.getVertex(Direction.OUT);
-				
-				Edge hasRelationship = parentDirectory.addEdge(RelationshipLabels.has.name(), file);
-				for(String key : hadRelationship.getPropertyKeys())
-				{
-					hasRelationship.setProperty(key, hadRelationship.getProperty(key));
-				}
-				hasRelationship.setProperty(MandatoryProperties.commitId.name(), commitId);
-				
-				hadRelationship.remove();
+				this.commonCode.restoreNode(commitId, nodeIdToBeRestored);
 				titanTransaction.commit();
 			}
 		}
@@ -270,26 +183,27 @@ public class FileServiceImpl implements FileService
 	}
 	
 	@Override
-	public void moveFile(String commitId, String userId, String filesystemId, String oldFilePath, String oldFileName, String newFilePath, String newFileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, DuplicateFile
+	public String moveFile(String commitId, String userId, String filesystemId, int filesystemVersion, String oldFilePath, String oldFileName, String newFilePath, String newFileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound, DuplicateFile
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
-		
 		try
 		{
-			Map<String, Object> fileProperties = null;
+			Map<String, Object> fileProperties = this.getFile(userId, filesystemId, filesystemVersion, oldFilePath, oldFileName);
+			String nodeId = (String) fileProperties.remove(MandatoryProperties.nodeId.name());
+			fileProperties.remove(MandatoryProperties.filePath.name());
+			fileProperties.remove(MandatoryProperties.fileName.name());
+			fileProperties.remove(MandatoryProperties.version.name());
+			
+			GenericService genericService = new GenericServiceImpl();
 			try
 			{
-				fileProperties = this.getFile(userId, filesystemId, oldFilePath, oldFileName, -1);
-				fileProperties.remove(MandatoryProperties.nodeId.name());
-				fileProperties.remove(MandatoryProperties.filePath.name());
-				fileProperties.remove(MandatoryProperties.fileName.name());
-				fileProperties.remove(MandatoryProperties.version.name());
+				genericService.deleteNodeTemporarily(commitId, nodeId);
 			}
-			catch (VersionNotFound e) {}
+			catch (NodeNotFound | NodeUnavailable e) {}
 			
-			this.deleteFileTemporarily(commitId, userId, filesystemId, oldFilePath, oldFileName);
-			this.createNewFile(commitId, newFilePath, newFileName, filesystemId, userId, fileProperties);
+			String fileNodeId = this.createNewFile(commitId, userId, filesystemId, filesystemVersion, newFilePath, newFileName, fileProperties);
 			titanTransaction.commit();
+			return fileNodeId;
 		}
 		finally
 		{
@@ -301,13 +215,12 @@ public class FileServiceImpl implements FileService
 	}
 
 	@Override
-	public Map<String, Object> getFile(String userId, String filesystemId, String filePath, String fileName, int version) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
+	public Map<String, Object> getFile(String userId, String filesystemId, int filesystemVersion, String filePath, String fileName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
-		
 		try
 		{
-			Vertex file = new CommonCode().getVersion("file", userId, filesystemId, filePath, fileName, version, false, null);
+			Vertex file = this.commonCode.getFile(userId, filesystemId, filesystemVersion, filePath, fileName);
 			Map<String, Object> fileProperties = new HashMap<String, Object>();
 			
 			Iterable<String> keys = file.getPropertyKeys();

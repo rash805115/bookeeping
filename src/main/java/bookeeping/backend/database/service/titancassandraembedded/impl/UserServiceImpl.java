@@ -1,7 +1,6 @@
 package bookeeping.backend.database.service.titancassandraembedded.impl;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -19,10 +18,12 @@ import com.tinkerpop.blueprints.Vertex;
 public class UserServiceImpl implements UserService
 {
 	private TitanGraph titanGraph;
+	private CommonCode commonCode;
 	
 	public UserServiceImpl()
 	{
 		this.titanGraph = TitanCassandraEmbeddedConnection.getInstance().getTitanGraphObject();
+		this.commonCode = new CommonCode();
 	}
 	
 	@Override
@@ -34,18 +35,17 @@ public class UserServiceImpl implements UserService
 		{
 			try
 			{
-				new CommonCode().getUser(userId);
+				this.commonCode.getUser(userId);
 				throw new DuplicateUser("ERROR: User already present! - \"" + userId + "\"");
 			}
 			catch(UserNotFound userNotFound)
 			{
-				Vertex vertex = this.titanGraph.addVertexWithLabel(NodeLabels.User.name());
-				vertex.setProperty(MandatoryProperties.nodeId.name(), new AutoIncrementServiceImpl().getNextAutoIncrement());
-				vertex.setProperty(MandatoryProperties.userId.name(), userId);
+				Vertex node = this.commonCode.createNode(NodeLabels.User);
+				node.setProperty(MandatoryProperties.userId.name(), userId);
 				
 				for(Entry<String, Object> userPropertiesEntry : userProperties.entrySet())
 				{
-					vertex.setProperty(userPropertiesEntry.getKey(), userPropertiesEntry.getValue());
+					node.setProperty(userPropertiesEntry.getKey(), userPropertiesEntry.getValue());
 				}
 				
 				titanTransaction.commit();
@@ -59,12 +59,6 @@ public class UserServiceImpl implements UserService
 			}
 		}
 	}
-	
-	@Override
-	public int countUsers()
-	{
-		return 0;
-	}
 
 	@Override
 	public Map<String, Object> getUser(String userId) throws UserNotFound
@@ -73,7 +67,7 @@ public class UserServiceImpl implements UserService
 		
 		try
 		{
-			Vertex user = new CommonCode().getUser(userId);
+			Vertex user = this.commonCode.getUser(userId);
 			Map<String, Object> userProperties = new HashMap<String, Object>();
 			
 			Iterable<String> iterable = user.getPropertyKeys();
@@ -92,17 +86,5 @@ public class UserServiceImpl implements UserService
 				titanTransaction.rollback();
 			}
 		}
-	}
-	
-	@Override
-	public List<Map<String, Object>> getUsersByMatchingAllProperty(Map<String, Object> userProperties)
-	{
-		return null;
-	}
-	
-	@Override
-	public List<Map<String, Object>> getUsersByMatchingAnyProperty(Map<String, Object> userProperties)
-	{
-		return null;
 	}
 }

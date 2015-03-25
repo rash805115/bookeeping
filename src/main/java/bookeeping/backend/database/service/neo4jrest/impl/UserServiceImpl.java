@@ -40,8 +40,7 @@ public class UserServiceImpl implements UserService
 			}
 			catch(UserNotFound userNotFound)
 			{
-				Node node = this.graphDatabaseService.createNode(NodeLabels.User);
-				node.setProperty(MandatoryProperties.nodeId.name(), new AutoIncrementServiceImpl().getNextAutoIncrement());
+				Node node = this.commonCode.createNode(NodeLabels.User);
 				node.setProperty(MandatoryProperties.userId.name(), userId);
 				
 				for(Entry<String, Object> userPropertiesEntry : userProperties.entrySet())

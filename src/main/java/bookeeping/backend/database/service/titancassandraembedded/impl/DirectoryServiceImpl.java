@@ -1,18 +1,22 @@
 package bookeeping.backend.database.service.titancassandraembedded.impl;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import bookeeping.backend.database.MandatoryProperties;
 import bookeeping.backend.database.connection.singleton.TitanCassandraEmbeddedConnection;
 import bookeeping.backend.database.service.DirectoryService;
+import bookeeping.backend.database.service.GenericService;
 import bookeeping.backend.database.titan.NodeLabels;
 import bookeeping.backend.database.titan.RelationshipLabels;
 import bookeeping.backend.exception.DirectoryNotFound;
 import bookeeping.backend.exception.DuplicateDirectory;
-import bookeeping.backend.exception.FileNotFound;
 import bookeeping.backend.exception.FilesystemNotFound;
+import bookeeping.backend.exception.NodeNotFound;
+import bookeeping.backend.exception.NodeUnavailable;
 import bookeeping.backend.exception.UserNotFound;
 import bookeeping.backend.exception.VersionNotFound;
 
@@ -25,115 +29,43 @@ import com.tinkerpop.blueprints.Vertex;
 public class DirectoryServiceImpl implements DirectoryService
 {
 	private TitanGraph titanGraph;
+	private CommonCode commonCode;
 	
 	public DirectoryServiceImpl()
 	{
 		this.titanGraph = TitanCassandraEmbeddedConnection.getInstance().getTitanGraphObject();
+		this.commonCode = new CommonCode();
 	}
 	
 	@Override
-	public void createNewDirectory(String userId, String filesystemId, String filesystemVersion, String directoryPath, String directoryName, Map<String, Object> directoryProperties) throws UserNotFound, FilesystemNotFound, DuplicateDirectory
+	public String createNewDirectory(String commitId, String userId, String filesystemId, int filesystemVersion, String directoryPath, String directoryName, Map<String, Object> directoryProperties) throws UserNotFound, FilesystemNotFound, VersionNotFound, DuplicateDirectory
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
-		
 		try
 		{
-			CommonCode commonCode = new CommonCode();
 			try
 			{
-				commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, false, null);
-				throw new DuplicateDirectory("ERROR: Directory already present! - \"" + directoryPath + "/" + directoryName + "\"");
+				this.commonCode.getDirectory(userId, filesystemId, filesystemVersion, directoryPath, directoryName);
+				throw new DuplicateDirectory("ERROR: Directory already present! - \"" + (directoryPath.equals("/") ? "" : directoryPath) + "/" + directoryName + "\"");
 			}
 			catch(DirectoryNotFound directoryNotFound)
 			{
-				Vertex node = this.titanGraph.addVertexWithLabel(NodeLabels.Directory.name());
-				node.setProperty(MandatoryProperties.nodeId.name(), new AutoIncrementServiceImpl().getNextAutoIncrement());
-				node.setProperty(MandatoryProperties.directoryPath.name(), directoryPath);
-				node.setProperty(MandatoryProperties.directoryName.name(), directoryName);
-				node.setProperty(MandatoryProperties.version.name(), 0);
+				Vertex directory = this.commonCode.createNode(NodeLabels.Directory);
+				directory.setProperty(MandatoryProperties.directoryPath.name(), directoryPath);
+				directory.setProperty(MandatoryProperties.directoryName.name(), directoryName);
+				directory.setProperty(MandatoryProperties.version.name(), 0);
+				String directoryNodeId = (String) directory.getProperty(MandatoryProperties.nodeId.name());
 				
 				for(Entry<String, Object> directoryPropertiesEntry : directoryProperties.entrySet())
 				{
-					node.setProperty(directoryPropertiesEntry.getKey(), directoryPropertiesEntry.getValue());
+					directory.setProperty(directoryPropertiesEntry.getKey(), directoryPropertiesEntry.getValue());
 				}
 				
-				Vertex rootDirectory = commonCode.getRootDirectory(userId, filesystemId);
-				rootDirectory.addEdge(RelationshipLabels.has.name(), node).setProperty(MandatoryProperties.commitId.name(), filesystemVersion);
+				Vertex rootDirectory = this.commonCode.getRootDirectory(userId, filesystemId, filesystemVersion);
+				rootDirectory.addEdge(RelationshipLabels.has.name(), directory).setProperty(MandatoryProperties.commitId.name(), commitId);
 				titanTransaction.commit();
+				return directoryNodeId;
 			}
-		}
-		finally
-		{
-			if(titanTransaction.isOpen())
-			{
-				titanTransaction.rollback();
-			}
-		}
-	}
-
-	@Override
-	public void createNewVersion(String userId, String filesystemId, String filesystemVersion, String directoryPath, String directoryName, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws UserNotFound, FilesystemNotFound, DirectoryNotFound
-	{
-		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
-		
-		try
-		{
-			CommonCode commonCode = new CommonCode();
-			Vertex directory = null;
-			try
-			{
-				directory = commonCode.getVersion("directory", userId, filesystemId, directoryPath, directoryName, -1, false, null);
-			}
-			catch (VersionNotFound | FileNotFound e) {}
-			Vertex versionedDirectory = commonCode.copyNode(directory);
-			
-			int directoryLatestVersion = (int) directory.getProperty(MandatoryProperties.version.name());
-			versionedDirectory.setProperty(MandatoryProperties.version.name(), directoryLatestVersion + 1);
-			for(Entry<String, Object> entry : changedProperties.entrySet())
-			{
-				versionedDirectory.setProperty(entry.getKey(), entry.getValue());
-			}
-			versionedDirectory.removeProperty(MandatoryProperties.directoryPath.name());
-			versionedDirectory.removeProperty(MandatoryProperties.directoryName.name());
-			
-			Edge relationship = directory.addEdge(RelationshipLabels.hasVersion.name(), versionedDirectory);
-			for(Entry<String, Object> entry : changeMetadata.entrySet())
-			{
-				relationship.setProperty(entry.getKey(), entry.getValue());
-			}
-			relationship.setProperty(MandatoryProperties.commitId.name(), filesystemVersion);
-			
-			titanTransaction.commit();
-		}
-		finally
-		{
-			if(titanTransaction.isOpen())
-			{
-				titanTransaction.rollback();
-			}
-		}
-	}
-
-	@Override
-	public void deleteDirectoryTemporarily(String userId, String filesystemId, String filesystemVersion, String directoryPath, String directoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound
-	{
-		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
-		
-		try
-		{
-			Vertex directory = new CommonCode().getDirectory(userId, filesystemId, directoryPath, directoryName, false, null);
-			Edge hasRelationship = directory.getEdges(Direction.IN, RelationshipLabels.has.name()).iterator().next();
-			Vertex parentDirectory = hasRelationship.getVertex(Direction.OUT);
-			
-			Edge hadRelationship = parentDirectory.addEdge(RelationshipLabels.had.name(), directory);
-			for(String key : hasRelationship.getPropertyKeys())
-			{
-				hadRelationship.setProperty(key, hasRelationship.getProperty(key));
-			}
-			hadRelationship.setProperty(MandatoryProperties.commitId.name(), filesystemVersion);
-			
-			hasRelationship.remove();
-			titanTransaction.commit();
 		}
 		finally
 		{
@@ -145,32 +77,19 @@ public class DirectoryServiceImpl implements DirectoryService
 	}
 	
 	@Override
-	public void restoreTemporaryDeletedDirectory(String userId, String filesystemId, String filesystemVersion, String directoryPath, String directoryName, String previousfilesystemVersion) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateDirectory
+	public void restoreDirectory(String commitId, String userId, String filesystemId, int filesystemVersion, String directoryPath, String directoryName, String nodeIdToBeRestored) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, VersionNotFound, DuplicateDirectory, NodeNotFound, NodeUnavailable
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
-		
 		try
 		{
-			CommonCode commonCode = new CommonCode();
 			try
 			{
-				commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, false, null);
-				throw new DuplicateDirectory("ERROR: Directory already present! - \"" + directoryPath + "/" + directoryName + "\"");
+				this.commonCode.getDirectory(userId, filesystemId, filesystemVersion, directoryPath, directoryName);
+				throw new DuplicateDirectory("ERROR: Directory already present! - \"" + (directoryPath.equals("/") ? "" : directoryPath) + "/" + directoryName + "\"");
 			}
 			catch(DirectoryNotFound directoryNotFound)
 			{
-				Vertex directory = commonCode.getDirectory(userId, filesystemId, directoryPath, directoryName, true, previousfilesystemVersion);
-				Edge hadRelationship = directory.getEdges(Direction.IN, RelationshipLabels.had.name()).iterator().next();
-				Vertex parentDirectory = hadRelationship.getVertex(Direction.OUT);
-				
-				Edge hasRelationship = parentDirectory.addEdge(RelationshipLabels.has.name(), directory);
-				for(String key : hadRelationship.getPropertyKeys())
-				{
-					hasRelationship.setProperty(key, hadRelationship.getProperty(key));
-				}
-				hasRelationship.setProperty(MandatoryProperties.commitId.name(), filesystemVersion);
-				
-				hadRelationship.remove();
+				this.commonCode.restoreNode(commitId, nodeIdToBeRestored);
 				titanTransaction.commit();
 			}
 		}
@@ -184,57 +103,66 @@ public class DirectoryServiceImpl implements DirectoryService
 	}
 	
 	@Override
-	public void moveDirectory(String userId, String filesystemId, String filesystemVersion, String oldDirectoryPath, String oldDirectoryName, String newDirectoryPath, String newDirectoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, DuplicateDirectory
+	public String moveDirectory(String commitId, String userId, String filesystemId, int filesystemVersion, String oldDirectoryPath, String oldDirectoryName, String newDirectoryPath, String newDirectoryName) throws UserNotFound, FilesystemNotFound, VersionNotFound, DirectoryNotFound, DuplicateDirectory
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
-		
 		try
 		{
-			Map<String, Object> directoryProperties = null;
+			List<String> ignoreRelationships = new ArrayList<String>();
+			ignoreRelationships.add(RelationshipLabels.hadAccess.name());
+			ignoreRelationships.add(RelationshipLabels.hasAccess.name());
+			ignoreRelationships.add(RelationshipLabels.hasVersion.name());
+			
+			Vertex oldDirectory = this.commonCode.getDirectory(userId, filesystemId, filesystemVersion, oldDirectoryPath, oldDirectoryName);
+			Vertex newDirectory = this.commonCode.copyNodeTree(oldDirectory, ignoreRelationships);
+			newDirectory.setProperty(MandatoryProperties.directoryPath.name(), newDirectoryPath);
+			newDirectory.setProperty(MandatoryProperties.directoryName.name(), newDirectoryName);
+			newDirectory.setProperty(MandatoryProperties.version.name(), 0);
+			String newDirectoryNodeId = (String) newDirectory.getProperty(MandatoryProperties.nodeId.name());
+			
+			Vertex parentNode = oldDirectory.getEdges(Direction.IN, RelationshipLabels.has.name()).iterator().next().getVertex(Direction.OUT);
+			parentNode.addEdge(RelationshipLabels.has.name(), newDirectory);
+			
+			GenericService genericService = new GenericServiceImpl();
 			try
 			{
-				directoryProperties = this.getDirectory(userId, filesystemId, oldDirectoryPath, oldDirectoryName, -1);
-				directoryProperties.remove(MandatoryProperties.nodeId.name());
-				directoryProperties.remove(MandatoryProperties.directoryPath.name());
-				directoryProperties.remove(MandatoryProperties.directoryName.name());
-				directoryProperties.remove(MandatoryProperties.version.name());
+				genericService.deleteNodeTemporarily(commitId, (String) oldDirectory.getProperty(MandatoryProperties.nodeId.name()));
 			}
-			catch (VersionNotFound e) {}
+			catch (NodeNotFound | NodeUnavailable e) {}
 			
-			this.deleteDirectoryTemporarily(filesystemVersion, userId, filesystemId, oldDirectoryPath, oldDirectoryName);
-			this.createNewDirectory(filesystemVersion, newDirectoryPath, newDirectoryName, filesystemId, userId, directoryProperties);
+			String oldPath = oldDirectoryPath.equals("/") ? "/" + oldDirectoryName : oldDirectoryPath + "/" + oldDirectoryName;
+			String newPath = newDirectoryPath.equals("/") ? "/" + newDirectoryName : newDirectoryPath + "/" + newDirectoryName;
 			
-			CommonCode commonCode = new CommonCode();
-			Vertex oldDirectory = commonCode.getDirectory(userId, filesystemId, oldDirectoryPath, oldDirectoryName, true, filesystemVersion);
-			Vertex newDirectory = commonCode.getDirectory(userId, filesystemId, oldDirectoryPath, oldDirectoryName, false, null);
-			for(Edge oldRelationship : oldDirectory.getEdges(Direction.OUT, RelationshipLabels.has.name()))
+			for(RelationshipLabels relationshipLabel : RelationshipLabels.values())
 			{
-				Vertex endNode = oldRelationship.getVertex(Direction.IN);
-				endNode.setProperty(MandatoryProperties.filePath.name(), newDirectoryPath + "/" + newDirectoryName);
-				Edge newRelationship = newDirectory.addEdge(oldRelationship.getLabel(), endNode);
-				
-				for(String key : oldRelationship.getPropertyKeys())
+				for(Edge newRelationship : newDirectory.getEdges(Direction.OUT, relationshipLabel.name()))
 				{
-					newRelationship.setProperty(key, oldRelationship.getProperty(key));
+					Vertex endNode = newRelationship.getVertex(Direction.IN);
+					endNode.setProperty(MandatoryProperties.filePath.name(), newPath);
 				}
-				
-				oldRelationship.remove();
 			}
-			for(Edge oldRelationship : oldDirectory.getEdges(Direction.OUT, RelationshipLabels.had.name()))
+			
+			List<Vertex> directoryList = this.commonCode.getAllDirectory(userId, filesystemId, filesystemVersion);
+			for(Vertex directory : directoryList)
 			{
-				Vertex endNode = oldRelationship.getVertex(Direction.IN);
-				endNode.setProperty(MandatoryProperties.filePath.name(), newDirectoryPath + "/" + newDirectoryName);
-				Edge newRelationship = newDirectory.addEdge(oldRelationship.getLabel(), endNode);
-				
-				for(String key : oldRelationship.getPropertyKeys())
+				String directoryPath = (String) directory.getProperty(MandatoryProperties.directoryPath.name());
+				if(directoryPath.startsWith(oldPath))
 				{
-					newRelationship.setProperty(key, oldRelationship.getProperty(key));
+					directory.setProperty(MandatoryProperties.directoryPath.name(), directoryPath.replaceFirst(oldPath, newPath));
+					for(RelationshipLabels relationshipLabel : RelationshipLabels.values())
+					{
+						for(Edge newRelationship : newDirectory.getEdges(Direction.OUT, relationshipLabel.name()))
+						{
+							Vertex endNode = newRelationship.getVertex(Direction.IN);
+							String filePath = (String) endNode.getProperty(MandatoryProperties.filePath.name());
+							if(filePath != null) endNode.setProperty(MandatoryProperties.filePath.name(), filePath.replaceFirst(oldPath, newPath));
+						}
+					}
 				}
-				
-				oldRelationship.remove();
 			}
 			
 			titanTransaction.commit();
+			return newDirectoryNodeId;
 		}
 		finally
 		{
@@ -246,18 +174,12 @@ public class DirectoryServiceImpl implements DirectoryService
 	}
 
 	@Override
-	public Map<String, Object> getDirectory(String userId, String filesystemId, String directoryPath, String directoryName, int version) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, VersionNotFound
+	public Map<String, Object> getDirectory(String userId, String filesystemId, int filesystemVersion, String directoryPath, String directoryName) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, VersionNotFound
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
-		
 		try
 		{
-			Vertex directory = null;
-			try
-			{
-				directory = new CommonCode().getVersion("directory", userId, filesystemId, directoryPath, directoryName, version, false, null);
-			}
-			catch (FileNotFound e) {}
+			Vertex directory = this.commonCode.getDirectory(userId, filesystemId, filesystemVersion, directoryPath, directoryName);
 			Map<String, Object> directoryProperties = new HashMap<String, Object>();
 			
 			Iterable<String> keys = directory.getPropertyKeys();

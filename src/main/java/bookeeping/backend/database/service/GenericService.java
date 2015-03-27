@@ -8,8 +8,8 @@ import bookeeping.backend.exception.VersionNotFound;
 
 public interface GenericService
 {
-	public String createNewVersion(String commitId, String nodeId, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws NodeNotFound;
+	public String createNewVersion(String commitId, String nodeId, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws NodeNotFound, NodeUnavailable;
 	public Map<String, Object> getNode(String nodeId) throws NodeNotFound;
-	public Map<String, Object> getNodeVersion(String nodeId, int version) throws NodeNotFound, VersionNotFound;
+	public Map<String, Object> getNodeVersion(String nodeId, int version) throws NodeNotFound, VersionNotFound, NodeUnavailable;
 	public void deleteNodeTemporarily(String commitId, String nodeId) throws NodeNotFound, NodeUnavailable;
 }

@@ -53,7 +53,7 @@ public class CommonCode
 		}
 	}
 	
-	public Vertex createNodeVersion(String commidId, String nodeId, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws NodeNotFound
+	public Vertex createNodeVersion(String commidId, String nodeId, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws NodeNotFound, NodeUnavailable
 	{
 		Vertex node = null;
 		try
@@ -80,9 +80,15 @@ public class CommonCode
 		return versionedNode;
 	}
 	
-	public Vertex getNodeVersion(String nodeId, int version) throws NodeNotFound, VersionNotFound
+	public Vertex getNodeVersion(String nodeId, int version) throws NodeNotFound, VersionNotFound, NodeUnavailable
 	{
 		Vertex node = this.getNode(nodeId);
+		TitanVertex titanVertex = (TitanVertex) node;
+		if(titanVertex.getLabel().equals(NodeLabels.AutoIncrement.name()) || titanVertex.getLabel().equals(NodeLabels.User.name()))
+		{
+			throw new NodeUnavailable("ERROR: No version property for this node! - \"" + nodeId + "(v=" + version + ")\"");
+		}
+		
 		do
 		{
 			if((int) node.getProperty(MandatoryProperties.version.name()) == version)
@@ -206,7 +212,7 @@ public class CommonCode
 		{
 			versionedFilesystem = this.getNodeVersion((String) filesystem.getProperty(MandatoryProperties.nodeId.name()), filesystemVersion);
 		}
-		catch (NodeNotFound e) {}
+		catch (NodeNotFound | NodeUnavailable e) {}
 		return versionedFilesystem.getEdges(Direction.OUT, RelationshipLabels.has.name()).iterator().next().getVertex(Direction.IN);
 	}
 	

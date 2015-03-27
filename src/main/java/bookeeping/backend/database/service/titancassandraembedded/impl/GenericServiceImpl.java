@@ -26,7 +26,7 @@ public class GenericServiceImpl implements GenericService
 	}
 	
 	@Override
-	public String createNewVersion(String commitId, String nodeId, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws NodeNotFound
+	public String createNewVersion(String commitId, String nodeId, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws NodeNotFound, NodeUnavailable
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
 		try
@@ -71,7 +71,7 @@ public class GenericServiceImpl implements GenericService
 	}
 	
 	@Override
-	public Map<String, Object> getNodeVersion(String nodeId, int version) throws NodeNotFound, VersionNotFound
+	public Map<String, Object> getNodeVersion(String nodeId, int version) throws NodeNotFound, VersionNotFound, NodeUnavailable
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
 		try

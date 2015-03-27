@@ -7,6 +7,7 @@ import java.util.Map.Entry;
 
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.index.ReadableIndex;
@@ -56,7 +57,7 @@ public class CommonCode
 		}
 	}
 	
-	public Node createNodeVersion(String commidId, String nodeId, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws NodeNotFound
+	public Node createNodeVersion(String commidId, String nodeId, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws NodeNotFound, NodeUnavailable
 	{
 		Node node = null;
 		try
@@ -83,9 +84,17 @@ public class CommonCode
 		return versionedNode;
 	}
 	
-	public Node getNodeVersion(String nodeId, int version) throws NodeNotFound, VersionNotFound
+	public Node getNodeVersion(String nodeId, int version) throws NodeNotFound, VersionNotFound, NodeUnavailable
 	{
 		Node node = this.getNode(nodeId);
+		for(Label label : node.getLabels())
+		{
+			if(label.name().equals(NodeLabels.AutoIncrement.name()) || label.name().equals(NodeLabels.User.name()))
+			{
+				throw new NodeUnavailable("ERROR: No version property for this node! - \"" + nodeId + "(v=" + version + ")\"");
+			}
+		}
+		
 		do
 		{
 			if((int) node.getProperty(MandatoryProperties.version.name()) == version)
@@ -201,7 +210,7 @@ public class CommonCode
 		{
 			versionedFilesystem = this.getNodeVersion((String) filesystem.getProperty(MandatoryProperties.nodeId.name()), filesystemVersion);
 		}
-		catch (NodeNotFound e) {}
+		catch (NodeNotFound | NodeUnavailable e) {}
 		return versionedFilesystem.getSingleRelationship(RelationshipLabels.has, Direction.OUTGOING).getEndNode();
 	}
 	

@@ -139,6 +139,11 @@ public class CommonCode
 		{
 			hasRelationship = iterator.next();
 		}
+
+		if(hasRelationship.getVertex(Direction.OUT).getProperty(MandatoryProperties.filesystemId.name()) != null)
+		{
+			throw new NodeUnavailable("ERROR: Root node cannot be deleted! - \"" + nodeId + "\"");
+		}
 		
 		Vertex parentNode = hasRelationship.getVertex(Direction.OUT);
 		Edge hadRelationship = parentNode.addEdge(RelationshipLabels.had.name(), node);

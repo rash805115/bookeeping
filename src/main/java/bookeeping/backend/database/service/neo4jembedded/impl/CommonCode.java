@@ -136,6 +136,11 @@ public class CommonCode
 		{
 			throw new NodeUnavailable("ERROR: Node is unavailable! - \"" + nodeId + "\". Could be it has already been deleted.");
 		}
+
+		if(hasRelationship.getStartNode().hasProperty(MandatoryProperties.filesystemId.name()))
+		{
+			throw new NodeUnavailable("ERROR: Root node cannot be deleted! - \"" + nodeId + "\"");
+		}
 		
 		Node parentNode = hasRelationship.getStartNode();
 		Relationship hadRelationship = parentNode.createRelationshipTo(node, RelationshipLabels.had);

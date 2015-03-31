@@ -7,8 +7,8 @@ import java.util.Map.Entry;
 
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.index.ReadableIndex;
 
@@ -87,17 +87,19 @@ public class CommonCode
 	public Node getNodeVersion(String nodeId, int version) throws NodeNotFound, VersionNotFound, NodeUnavailable
 	{
 		Node node = this.getNode(nodeId);
-		for(Label label : node.getLabels())
+		do
 		{
-			if(label.name().equals(NodeLabels.AutoIncrement.name()) || label.name().equals(NodeLabels.User.name()))
+			int nodeVersion = -1;
+			try
+			{
+				nodeVersion = (int) node.getProperty(MandatoryProperties.version.name());
+			}
+			catch(NotFoundException notFoundException)
 			{
 				throw new NodeUnavailable("ERROR: No version property for this node! - \"" + nodeId + "(v=" + version + ")\"");
 			}
-		}
-		
-		do
-		{
-			if((int) node.getProperty(MandatoryProperties.version.name()) == version)
+			
+			if(nodeVersion == version)
 			{
 				return node;
 			}

@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.neo4j.graphdb.NotFoundException;
+
 import bookeeping.backend.database.MandatoryProperties;
 import bookeeping.backend.database.connection.singleton.TitanCassandraEmbeddedConnection;
 import bookeeping.backend.database.titan.NodeLabels;
@@ -83,15 +85,19 @@ public class CommonCode
 	public Vertex getNodeVersion(String nodeId, int version) throws NodeNotFound, VersionNotFound, NodeUnavailable
 	{
 		Vertex node = this.getNode(nodeId);
-		TitanVertex titanVertex = (TitanVertex) node;
-		if(titanVertex.getLabel().equals(NodeLabels.AutoIncrement.name()) || titanVertex.getLabel().equals(NodeLabels.User.name()))
-		{
-			throw new NodeUnavailable("ERROR: No version property for this node! - \"" + nodeId + "(v=" + version + ")\"");
-		}
-		
 		do
 		{
-			if((int) node.getProperty(MandatoryProperties.version.name()) == version)
+			int nodeVersion = -1;
+			try
+			{
+				nodeVersion = (int) node.getProperty(MandatoryProperties.version.name());
+			}
+			catch(NotFoundException notFoundException)
+			{
+				throw new NodeUnavailable("ERROR: No version property for this node! - \"" + nodeId + "(v=" + version + ")\"");
+			}
+			
+			if(nodeVersion == version)
 			{
 				return node;
 			}

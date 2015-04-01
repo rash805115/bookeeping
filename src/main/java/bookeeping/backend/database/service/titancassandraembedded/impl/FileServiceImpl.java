@@ -90,6 +90,11 @@ public class FileServiceImpl implements FileService
 	@Override
 	public void shareFile(String commitId, String userId, String filesystemId, int filesystemVersion, String filePath, String fileName, String shareWithUserId, String filePermission) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
 	{
+		if(userId.equals(shareWithUserId))
+		{
+			return;
+		}
+		
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
 		try
 		{
@@ -129,11 +134,11 @@ public class FileServiceImpl implements FileService
 			Vertex beneficiaryUser = this.commonCode.getUser(unshareWithUserId);
 			Vertex fileToBeShared = this.commonCode.getFile(userId, filesystemId, filesystemVersion, filePath, fileName);
 			
-			Edge hadAccessRelationship = beneficiaryUser.addEdge(RelationshipLabels.hadAccess.name(), fileToBeShared);
 			for(Edge hasAccessRelationship : beneficiaryUser.getEdges(Direction.OUT, RelationshipLabels.hasAccess.name()))
 			{
 				if(hasAccessRelationship.getVertex(Direction.IN).getProperty(MandatoryProperties.nodeId.name()).equals(fileToBeShared.getProperty(MandatoryProperties.nodeId.name())))
 				{
+					Edge hadAccessRelationship = beneficiaryUser.addEdge(RelationshipLabels.hadAccess.name(), fileToBeShared);
 					for(String key : hasAccessRelationship.getPropertyKeys())
 					{
 						hadAccessRelationship.setProperty(key, hasAccessRelationship.getProperty(key));

@@ -84,6 +84,11 @@ public class FileServiceImpl implements FileService
 	@Override
 	public void shareFile(String commitId, String userId, String filesystemId, int filesystemVersion, String filePath, String fileName, String shareWithUserId, String filePermission) throws UserNotFound, FilesystemNotFound, DirectoryNotFound, FileNotFound, VersionNotFound
 	{
+		if(userId.equals(shareWithUserId))
+		{
+			return;
+		}
+		
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
 			Node beneficiaryUser = this.commonCode.getUser(shareWithUserId);
@@ -114,11 +119,11 @@ public class FileServiceImpl implements FileService
 			Node beneficiaryUser = this.commonCode.getUser(unshareWithUserId);
 			Node fileToBeShared = this.commonCode.getFile(userId, filesystemId, filesystemVersion, filePath, fileName);
 			
-			Relationship hadAccessRelationship = beneficiaryUser.createRelationshipTo(fileToBeShared, RelationshipLabels.hadAccess);
 			for(Relationship hasAccessRelationship : beneficiaryUser.getRelationships(Direction.OUTGOING, RelationshipLabels.hasAccess))
 			{
 				if(hasAccessRelationship.getEndNode().getProperty(MandatoryProperties.nodeId.name()).equals(fileToBeShared.getProperty(MandatoryProperties.nodeId.name())))
 				{
+					Relationship hadAccessRelationship = beneficiaryUser.createRelationshipTo(fileToBeShared, RelationshipLabels.hadAccess);
 					for(String key : hasAccessRelationship.getPropertyKeys())
 					{
 						hadAccessRelationship.setProperty(key, hasAccessRelationship.getProperty(key));

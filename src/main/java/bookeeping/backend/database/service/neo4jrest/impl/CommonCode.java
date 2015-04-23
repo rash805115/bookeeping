@@ -1,6 +1,7 @@
 package bookeeping.backend.database.service.neo4jrest.impl;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -55,6 +56,19 @@ public class CommonCode
 		{
 			return node;
 		}
+	}
+	
+	public Map<String, Object> getNodeProperties(Node node) throws NodeNotFound
+	{
+		Map<String, Object> nodeProperties = new HashMap<String, Object>();
+		Iterable<String> nodeKeys = node.getPropertyKeys();
+		
+		for(String key : nodeKeys)
+		{
+			nodeProperties.put(key, node.getProperty(key));
+		}
+		
+		return nodeProperties;
 	}
 	
 	public Node createNodeVersion(String commidId, String nodeId, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws NodeNotFound, NodeUnavailable
@@ -262,6 +276,33 @@ public class CommonCode
 		return directoryList;
 	}
 	
+	public List<Node> getAllTopFilesAndDirectory(String userId, String filesystemId, int filesystemVersion) throws UserNotFound, FilesystemNotFound, VersionNotFound
+	{
+		List<Node> directoryList = new ArrayList<Node>();
+		Node rootDirectory = this.getRootDirectory(userId, filesystemId, filesystemVersion);
+		Iterable<Relationship> iterable = rootDirectory.getRelationships(Direction.OUTGOING, RelationshipLabels.has);
+		
+		for(Relationship relationship : iterable)
+		{
+			directoryList.add(relationship.getEndNode());
+		}
+		
+		return directoryList;
+	}
+	
+	public List<Node> getAllFilesInDirectory(Node directory)
+	{
+		List<Node> fileList = new ArrayList<Node>();
+		Iterable<Relationship> iterable = directory.getRelationships(Direction.OUTGOING, RelationshipLabels.has);
+		
+		for(Relationship relationship : iterable)
+		{
+			fileList.add(relationship.getEndNode());
+		}
+		
+		return fileList;
+	}
+	
 	public Node getFile(String userId, String filesystemId, int filesystemVersion, String filePath, String fileName) throws UserNotFound, FilesystemNotFound, VersionNotFound, DirectoryNotFound, FileNotFound
 	{
 		Node parentDirectory = null;
@@ -361,5 +402,29 @@ public class CommonCode
 		while(! pendingNodeList.isEmpty());
 		
 		return rootNodeCopy;
+	}
+	
+	public List<Map<String, Object>> getNodeVersions(String nodeId) throws NodeNotFound
+	{
+		List<Map<String, Object>> versionList = new ArrayList<Map<String, Object>>();
+		Node node = this.getNode(nodeId);
+		versionList.add(this.getNodeProperties(node));
+		
+		do
+		{
+			Relationship relationship = node.getSingleRelationship(RelationshipLabels.hasVersion, Direction.OUTGOING);
+			if(relationship != null)
+			{
+				node = relationship.getEndNode();
+				versionList.add(this.getNodeProperties(node));
+			}
+			else
+			{
+				node = null;
+			}
+		}
+		while(node != null);
+		
+		return versionList;
 	}
 }

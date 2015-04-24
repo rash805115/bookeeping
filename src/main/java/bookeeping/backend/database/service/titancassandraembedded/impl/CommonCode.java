@@ -1,6 +1,7 @@
 package bookeeping.backend.database.service.titancassandraembedded.impl;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +54,19 @@ public class CommonCode
 		{
 			throw new NodeNotFound("ERROR: Node not found! - \"" + nodeId + "\"");
 		}
+	}
+	
+	public Map<String, Object> getNodeProperties(Vertex node) throws NodeNotFound
+	{
+		Map<String, Object> nodeProperties = new HashMap<String, Object>();
+		Iterable<String> nodeKeys = node.getPropertyKeys();
+		
+		for(String key : nodeKeys)
+		{
+			nodeProperties.put(key, node.getProperty(key));
+		}
+		
+		return nodeProperties;
 	}
 	
 	public Vertex createNodeVersion(String commidId, String nodeId, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws NodeNotFound, NodeUnavailable
@@ -124,6 +138,55 @@ public class CommonCode
 		while(node != null);
 		
 		throw new VersionNotFound("ERROR: Node version not found! - \"" + nodeId + "(v=" + version + ")\"");
+	}
+	
+	public List<Map<String, Object>> getNodeVersions(String nodeId) throws NodeNotFound
+	{
+		List<Map<String, Object>> versionList = new ArrayList<Map<String, Object>>();
+		Vertex node = this.getNode(nodeId);
+		versionList.add(this.getNodeProperties(node));
+		
+		do
+		{
+			Iterator<Edge> iterator = node.getEdges(Direction.OUT, RelationshipLabels.hasVersion.name()).iterator();
+			if(iterator.hasNext())
+			{
+				node = iterator.next().getVertex(Direction.IN);
+			}
+			else
+			{
+				node = null;
+			}
+		}
+		while(node != null);
+		
+		return versionList;
+	}
+	
+	public List<Vertex> getChildren(String nodeId) throws NodeNotFound
+	{
+		List<Vertex> nodeList = new ArrayList<Vertex>();
+		Vertex node = this.getNode(nodeId);
+		Iterable<Edge> iterable = node.getEdges(Direction.OUT, RelationshipLabels.has.name());
+		for(Edge relationship : iterable)
+		{
+			nodeList.add(relationship.getVertex(Direction.IN));
+		}
+		
+		return nodeList;
+	}
+	
+	public List<Vertex> getDeletedChildren(String nodeId) throws NodeNotFound
+	{
+		List<Vertex> nodeList = new ArrayList<Vertex>();
+		Vertex node = this.getNode(nodeId);
+		Iterable<Edge> iterable = node.getEdges(Direction.OUT, RelationshipLabels.had.name());
+		for(Edge relationship : iterable)
+		{
+			nodeList.add(relationship.getVertex(Direction.IN));
+		}
+		
+		return nodeList;
 	}
 	
 	public Vertex deleteNodeTemporarily(String commitId, String nodeId) throws NodeNotFound, NodeUnavailable

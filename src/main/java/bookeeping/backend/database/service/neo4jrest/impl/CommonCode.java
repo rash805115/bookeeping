@@ -142,6 +142,56 @@ public class CommonCode
 		throw new VersionNotFound("ERROR: Node version not found! - \"" + nodeId + "(v=" + version + ")\"");
 	}
 	
+	public List<Map<String, Object>> getNodeVersions(String nodeId) throws NodeNotFound
+	{
+		List<Map<String, Object>> versionList = new ArrayList<Map<String, Object>>();
+		Node node = this.getNode(nodeId);
+		versionList.add(this.getNodeProperties(node));
+		
+		do
+		{
+			Relationship relationship = node.getSingleRelationship(RelationshipLabels.hasVersion, Direction.OUTGOING);
+			if(relationship != null)
+			{
+				node = relationship.getEndNode();
+				versionList.add(this.getNodeProperties(node));
+			}
+			else
+			{
+				node = null;
+			}
+		}
+		while(node != null);
+		
+		return versionList;
+	}
+	
+	public List<Node> getChildren(String nodeId) throws NodeNotFound
+	{
+		List<Node> nodeList = new ArrayList<Node>();
+		Node node = this.getNode(nodeId);
+		Iterable<Relationship> iterable = node.getRelationships(Direction.OUTGOING, RelationshipLabels.has);
+		for(Relationship relationship : iterable)
+		{
+			nodeList.add(relationship.getEndNode());
+		}
+		
+		return nodeList;
+	}
+	
+	public List<Node> getDeletedChildren(String nodeId) throws NodeNotFound
+	{
+		List<Node> nodeList = new ArrayList<Node>();
+		Node node = this.getNode(nodeId);
+		Iterable<Relationship> iterable = node.getRelationships(Direction.OUTGOING, RelationshipLabels.had);
+		for(Relationship relationship : iterable)
+		{
+			nodeList.add(relationship.getEndNode());
+		}
+		
+		return nodeList;
+	}
+	
 	public Node deleteNodeTemporarily(String commitId, String nodeId) throws NodeNotFound, NodeUnavailable
 	{
 		Node node = this.getNode(nodeId);
@@ -276,33 +326,6 @@ public class CommonCode
 		return directoryList;
 	}
 	
-	public List<Node> getAllTopFilesAndDirectory(String userId, String filesystemId, int filesystemVersion) throws UserNotFound, FilesystemNotFound, VersionNotFound
-	{
-		List<Node> directoryList = new ArrayList<Node>();
-		Node rootDirectory = this.getRootDirectory(userId, filesystemId, filesystemVersion);
-		Iterable<Relationship> iterable = rootDirectory.getRelationships(Direction.OUTGOING, RelationshipLabels.has);
-		
-		for(Relationship relationship : iterable)
-		{
-			directoryList.add(relationship.getEndNode());
-		}
-		
-		return directoryList;
-	}
-	
-	public List<Node> getAllFilesInDirectory(Node directory)
-	{
-		List<Node> fileList = new ArrayList<Node>();
-		Iterable<Relationship> iterable = directory.getRelationships(Direction.OUTGOING, RelationshipLabels.has);
-		
-		for(Relationship relationship : iterable)
-		{
-			fileList.add(relationship.getEndNode());
-		}
-		
-		return fileList;
-	}
-	
 	public Node getFile(String userId, String filesystemId, int filesystemVersion, String filePath, String fileName) throws UserNotFound, FilesystemNotFound, VersionNotFound, DirectoryNotFound, FileNotFound
 	{
 		Node parentDirectory = null;
@@ -402,29 +425,5 @@ public class CommonCode
 		while(! pendingNodeList.isEmpty());
 		
 		return rootNodeCopy;
-	}
-	
-	public List<Map<String, Object>> getNodeVersions(String nodeId) throws NodeNotFound
-	{
-		List<Map<String, Object>> versionList = new ArrayList<Map<String, Object>>();
-		Node node = this.getNode(nodeId);
-		versionList.add(this.getNodeProperties(node));
-		
-		do
-		{
-			Relationship relationship = node.getSingleRelationship(RelationshipLabels.hasVersion, Direction.OUTGOING);
-			if(relationship != null)
-			{
-				node = relationship.getEndNode();
-				versionList.add(this.getNodeProperties(node));
-			}
-			else
-			{
-				node = null;
-			}
-		}
-		while(node != null);
-		
-		return versionList;
 	}
 }

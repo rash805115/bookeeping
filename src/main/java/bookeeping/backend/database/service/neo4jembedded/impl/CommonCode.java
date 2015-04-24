@@ -1,6 +1,7 @@
 package bookeeping.backend.database.service.neo4jembedded.impl;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -55,6 +56,19 @@ public class CommonCode
 		{
 			return node;
 		}
+	}
+	
+	public Map<String, Object> getNodeProperties(Node node) throws NodeNotFound
+	{
+		Map<String, Object> nodeProperties = new HashMap<String, Object>();
+		Iterable<String> nodeKeys = node.getPropertyKeys();
+		
+		for(String key : nodeKeys)
+		{
+			nodeProperties.put(key, node.getProperty(key));
+		}
+		
+		return nodeProperties;
 	}
 	
 	public Node createNodeVersion(String commidId, String nodeId, Map<String, Object> changeMetadata, Map<String, Object> changedProperties) throws NodeNotFound, NodeUnavailable
@@ -126,6 +140,56 @@ public class CommonCode
 		while(node != null);
 		
 		throw new VersionNotFound("ERROR: Node version not found! - \"" + nodeId + "(v=" + version + ")\"");
+	}
+	
+	public List<Map<String, Object>> getNodeVersions(String nodeId) throws NodeNotFound
+	{
+		List<Map<String, Object>> versionList = new ArrayList<Map<String, Object>>();
+		Node node = this.getNode(nodeId);
+		versionList.add(this.getNodeProperties(node));
+		
+		do
+		{
+			Relationship relationship = node.getSingleRelationship(RelationshipLabels.hasVersion, Direction.OUTGOING);
+			if(relationship != null)
+			{
+				node = relationship.getEndNode();
+				versionList.add(this.getNodeProperties(node));
+			}
+			else
+			{
+				node = null;
+			}
+		}
+		while(node != null);
+		
+		return versionList;
+	}
+	
+	public List<Node> getChildren(String nodeId) throws NodeNotFound
+	{
+		List<Node> nodeList = new ArrayList<Node>();
+		Node node = this.getNode(nodeId);
+		Iterable<Relationship> iterable = node.getRelationships(Direction.OUTGOING, RelationshipLabels.has);
+		for(Relationship relationship : iterable)
+		{
+			nodeList.add(relationship.getEndNode());
+		}
+		
+		return nodeList;
+	}
+	
+	public List<Node> getDeletedChildren(String nodeId) throws NodeNotFound
+	{
+		List<Node> nodeList = new ArrayList<Node>();
+		Node node = this.getNode(nodeId);
+		Iterable<Relationship> iterable = node.getRelationships(Direction.OUTGOING, RelationshipLabels.had);
+		for(Relationship relationship : iterable)
+		{
+			nodeList.add(relationship.getEndNode());
+		}
+		
+		return nodeList;
 	}
 	
 	public Node deleteNodeTemporarily(String commitId, String nodeId) throws NodeNotFound, NodeUnavailable

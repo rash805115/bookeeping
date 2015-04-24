@@ -1,7 +1,6 @@
 package bookeeping.backend.database.service.neo4jembedded.impl;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -151,13 +150,12 @@ public class DirectoryServiceImpl implements DirectoryService
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
 			Node directory = this.commonCode.getDirectory(userId, filesystemId, filesystemVersion, directoryPath, directoryName);
-			Map<String, Object> directoryProperties = new HashMap<String, Object>();
-			
-			Iterable<String> keys = directory.getPropertyKeys();
-			for(String key : keys)
+			Map<String, Object> directoryProperties = null;
+			try
 			{
-				directoryProperties.put(key, directory.getProperty(key));
+				directoryProperties = this.commonCode.getNodeProperties(directory);
 			}
+			catch(NodeNotFound nodeNotFound) {}
 			
 			transaction.success();
 			return directoryProperties;

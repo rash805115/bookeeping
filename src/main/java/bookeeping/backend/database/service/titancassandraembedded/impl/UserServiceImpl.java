@@ -1,6 +1,5 @@
 package bookeeping.backend.database.service.titancassandraembedded.impl;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -9,6 +8,7 @@ import bookeeping.backend.database.connection.singleton.TitanCassandraEmbeddedCo
 import bookeeping.backend.database.service.UserService;
 import bookeeping.backend.database.titan.NodeLabels;
 import bookeeping.backend.exception.DuplicateUser;
+import bookeeping.backend.exception.NodeNotFound;
 import bookeeping.backend.exception.UserNotFound;
 
 import com.thinkaurelius.titan.core.TitanGraph;
@@ -68,13 +68,12 @@ public class UserServiceImpl implements UserService
 		try
 		{
 			Vertex user = this.commonCode.getUser(userId);
-			Map<String, Object> userProperties = new HashMap<String, Object>();
-			
-			Iterable<String> iterable = user.getPropertyKeys();
-			for(String key : iterable)
+			Map<String, Object> userProperties = null;
+			try
 			{
-				userProperties.put(key, user.getProperty(key));
+				userProperties = this.commonCode.getNodeProperties(user);
 			}
+			catch(NodeNotFound nodeNotFound) {}
 			
 			titanTransaction.commit();
 			return userProperties;

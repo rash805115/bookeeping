@@ -1,6 +1,5 @@
 package bookeeping.backend.database.service.neo4jembedded.impl;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -13,6 +12,7 @@ import bookeeping.backend.database.connection.singleton.Neo4JEmbeddedConnection;
 import bookeeping.backend.database.neo4j.NodeLabels;
 import bookeeping.backend.database.service.UserService;
 import bookeeping.backend.exception.DuplicateUser;
+import bookeeping.backend.exception.NodeNotFound;
 import bookeeping.backend.exception.UserNotFound;
 
 public class UserServiceImpl implements UserService
@@ -59,13 +59,12 @@ public class UserServiceImpl implements UserService
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
 			Node user = this.commonCode.getUser(userId);
-			Map<String, Object> userProperties = new HashMap<String, Object>();
-			
-			Iterable<String> iterable = user.getPropertyKeys();
-			for(String key : iterable)
+			Map<String, Object> userProperties = null;
+			try
 			{
-				userProperties.put(key, user.getProperty(key));
+				userProperties = this.commonCode.getNodeProperties(user);
 			}
+			catch(NodeNotFound nodeNotFound) {}
 			
 			transaction.success();
 			return userProperties;

@@ -1,6 +1,5 @@
 package bookeeping.backend.database.service.titancassandraembedded.impl;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import bookeeping.backend.database.MandatoryProperties;
@@ -51,13 +50,8 @@ public class GenericServiceImpl implements GenericService
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
 		try
 		{
-			Map<String, Object> nodeProperties = new HashMap<String, Object>();
 			Vertex node = this.commonCode.getNode(nodeId);
-			for(String key : node.getPropertyKeys())
-			{
-				nodeProperties.put(key, node.getProperty(key));
-			}
-			
+			Map<String, Object> nodeProperties = this.commonCode.getNodeProperties(node);
 			titanTransaction.commit();
 			return nodeProperties;
 		}
@@ -77,14 +71,7 @@ public class GenericServiceImpl implements GenericService
 		try
 		{
 			Vertex node = this.commonCode.getNodeVersion(nodeId, version);
-			Map<String, Object> properties = new HashMap<String, Object>();
-			
-			Iterable<String> keys = node.getPropertyKeys();
-			for(String key : keys)
-			{
-				properties.put(key, node.getProperty(key));
-			}
-			
+			Map<String, Object> properties = this.commonCode.getNodeProperties(node);
 			titanTransaction.commit();
 			return properties;
 		}

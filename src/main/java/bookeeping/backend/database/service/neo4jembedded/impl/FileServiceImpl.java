@@ -1,6 +1,5 @@
 package bookeeping.backend.database.service.neo4jembedded.impl;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -187,13 +186,12 @@ public class FileServiceImpl implements FileService
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
 			Node file = this.commonCode.getFile(userId, filesystemId, filesystemVersion, filePath, fileName);
-			Map<String, Object> fileProperties = new HashMap<String, Object>();
-			
-			Iterable<String> keys = file.getPropertyKeys();
-			for(String key : keys)
+			Map<String, Object> fileProperties = null;
+			try
 			{
-				fileProperties.put(key, file.getProperty(key));
+				fileProperties = this.commonCode.getNodeProperties(file);
 			}
+			catch(NodeNotFound nodeNotFound) {}
 			
 			transaction.success();
 			return fileProperties;

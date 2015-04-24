@@ -1,6 +1,5 @@
 package bookeeping.backend.database.service.neo4jrest.impl;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -89,13 +88,12 @@ public class FilesystemServiceImpl implements FilesystemService
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
 			Node filesystem = this.commonCode.getFilesystem(userId, filesystemId);
-			Map<String, Object> filesystemProperties = new HashMap<String, Object>();
-			
-			Iterable<String> keys = filesystem.getPropertyKeys();
-			for(String key : keys)
+			Map<String, Object> filesystemProperties = null;
+			try
 			{
-				filesystemProperties.put(key, filesystem.getProperty(key));
+				filesystemProperties = this.commonCode.getNodeProperties(filesystem);
 			}
+			catch(NodeNotFound nodeNotFound) {}
 			
 			transaction.success();
 			return filesystemProperties;

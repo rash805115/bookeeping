@@ -1,6 +1,5 @@
 package bookeeping.backend.database.service.titancassandraembedded.impl;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -226,13 +225,12 @@ public class FileServiceImpl implements FileService
 		try
 		{
 			Vertex file = this.commonCode.getFile(userId, filesystemId, filesystemVersion, filePath, fileName);
-			Map<String, Object> fileProperties = new HashMap<String, Object>();
-			
-			Iterable<String> keys = file.getPropertyKeys();
-			for(String key : keys)
+			Map<String, Object> fileProperties = null;
+			try
 			{
-				fileProperties.put(key, file.getProperty(key));
+				fileProperties = this.commonCode.getNodeProperties(file);
 			}
+			catch(NodeNotFound nodeNotFound) {}
 			
 			titanTransaction.commit();
 			return fileProperties;

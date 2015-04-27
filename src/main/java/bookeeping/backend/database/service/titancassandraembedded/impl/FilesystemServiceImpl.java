@@ -13,6 +13,7 @@ import bookeeping.backend.exception.FilesystemNotFound;
 import bookeeping.backend.exception.NodeNotFound;
 import bookeeping.backend.exception.NodeUnavailable;
 import bookeeping.backend.exception.UserNotFound;
+import bookeeping.backend.exception.VersionNotFound;
 
 import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.TitanTransaction;
@@ -112,6 +113,26 @@ public class FilesystemServiceImpl implements FilesystemService
 			
 			titanTransaction.commit();
 			return filesystemProperties;
+		}
+		finally
+		{
+			if(titanTransaction.isOpen())
+			{
+				titanTransaction.rollback();
+			}
+		}
+	}
+
+	@Override
+	public String getRootDirectory(String userId, String filesystemId, int filesystemVersion) throws UserNotFound, FilesystemNotFound, VersionNotFound
+	{
+		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
+		try
+		{
+			Vertex rootDirectory = this.commonCode.getRootDirectory(userId, filesystemId, filesystemVersion);
+			String nodeId = (String) rootDirectory.getProperty(MandatoryProperties.nodeId.name());
+			titanTransaction.commit();
+			return nodeId;
 		}
 		finally
 		{

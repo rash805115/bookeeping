@@ -17,6 +17,7 @@ import bookeeping.backend.exception.FilesystemNotFound;
 import bookeeping.backend.exception.NodeNotFound;
 import bookeeping.backend.exception.NodeUnavailable;
 import bookeeping.backend.exception.UserNotFound;
+import bookeeping.backend.exception.VersionNotFound;
 
 public class FilesystemServiceImpl implements FilesystemService
 {
@@ -97,6 +98,18 @@ public class FilesystemServiceImpl implements FilesystemService
 			
 			transaction.success();
 			return filesystemProperties;
+		}
+	}
+
+	@Override
+	public String getRootDirectory(String userId, String filesystemId, int filesystemVersion) throws UserNotFound, FilesystemNotFound, VersionNotFound
+	{
+		try(Transaction transaction = this.graphDatabaseService.beginTx())
+		{
+			Node rootDirectory = this.commonCode.getRootDirectory(userId, filesystemId, filesystemVersion);
+			String nodeId = (String) rootDirectory.getProperty(MandatoryProperties.nodeId.name());
+			transaction.success();
+			return nodeId;
 		}
 	}
 }

@@ -58,6 +58,7 @@ public class FilesystemServiceImpl implements FilesystemService
 				user.addEdge(RelationshipLabels.has.name(), filesystem).setProperty(MandatoryProperties.commitId.name(), commitId);
 				
 				filesystem.addEdge(RelationshipLabels.has.name(), rootDirectory).setProperty(MandatoryProperties.commitId.name(), commitId);
+				filesystem.setProperty(MandatoryProperties.rootNodeId.name(), rootDirectory.getProperty(MandatoryProperties.nodeId.name()));
 				titanTransaction.commit();
 				return filesystemNodeId;
 			}

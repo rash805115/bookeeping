@@ -59,6 +59,7 @@ public class FilesystemServiceImpl implements FilesystemService
 				user.createRelationshipTo(filesystem, RelationshipLabels.has).setProperty(MandatoryProperties.commitId.name(), commitId);
 				
 				filesystem.createRelationshipTo(rootDirectory, RelationshipLabels.has).setProperty(MandatoryProperties.commitId.name(), commitId);
+				filesystem.setProperty(MandatoryProperties.rootNodeId.name(), rootDirectory.getProperty(MandatoryProperties.nodeId.name()));
 				transaction.success();
 				return filesystemNodeId;
 			}

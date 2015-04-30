@@ -151,8 +151,8 @@ public class BasicFunctionalityTest
 		/*
 		 * Filesystem Check
 		 */
-		String filesystem1NodeId = this.filesystemService.createNewFilesystem("First Commit", this.user1, this.filesystem1, this.filesystem1Properties);
-		String filesystem2NodeId = this.filesystemService.createNewFilesystem("firstCommit", this.user2, this.filesystem2, this.filesystem2Properties);
+		String filesystem1NodeId = this.filesystemService.createNewFilesystem(this.user1, this.filesystem1, this.filesystem1Properties);
+		String filesystem2NodeId = this.filesystemService.createNewFilesystem(this.user2, this.filesystem2, this.filesystem2Properties);
 		
 		Map<String, Object> retrievedFilesystem1Properties = this.filesystemService.getFilesystem(this.user1, this.filesystem1);
 		String retrievedFilesystem1SourceLocation = (String) retrievedFilesystem1Properties.get("sourceLocation");

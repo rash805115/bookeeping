@@ -31,7 +31,7 @@ public class FilesystemServiceImpl implements FilesystemService
 	}
 	
 	@Override
-	public String createNewFilesystem(String commitId, String userId, String filesystemId, Map<String, Object> filesystemProperties) throws UserNotFound, DuplicateFilesystem
+	public String createNewFilesystem(String userId, String filesystemId, Map<String, Object> filesystemProperties) throws UserNotFound, DuplicateFilesystem
 	{
 		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
 		try
@@ -55,9 +55,9 @@ public class FilesystemServiceImpl implements FilesystemService
 				
 				Vertex rootDirectory = this.commonCode.createNode(NodeLabels.Directory);
 				Vertex user = this.commonCode.getUser(userId);
-				user.addEdge(RelationshipLabels.has.name(), filesystem).setProperty(MandatoryProperties.commitId.name(), commitId);
+				user.addEdge(RelationshipLabels.has.name(), filesystem);
 				
-				filesystem.addEdge(RelationshipLabels.has.name(), rootDirectory).setProperty(MandatoryProperties.commitId.name(), commitId);
+				filesystem.addEdge(RelationshipLabels.has.name(), rootDirectory);
 				filesystem.setProperty(MandatoryProperties.rootNodeId.name(), rootDirectory.getProperty(MandatoryProperties.nodeId.name()));
 				titanTransaction.commit();
 				return filesystemNodeId;

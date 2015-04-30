@@ -33,7 +33,7 @@ public class FilesystemServiceImpl implements FilesystemService
 	}
 	
 	@Override
-	public String createNewFilesystem(String commitId, String userId, String filesystemId, Map<String, Object> filesystemProperties) throws UserNotFound, DuplicateFilesystem
+	public String createNewFilesystem(String userId, String filesystemId, Map<String, Object> filesystemProperties) throws UserNotFound, DuplicateFilesystem
 	{
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
@@ -56,9 +56,9 @@ public class FilesystemServiceImpl implements FilesystemService
 				
 				Node rootDirectory = this.commonCode.createNode(NodeLabels.Directory);
 				Node user = this.commonCode.getUser(userId);
-				user.createRelationshipTo(filesystem, RelationshipLabels.has).setProperty(MandatoryProperties.commitId.name(), commitId);
+				user.createRelationshipTo(filesystem, RelationshipLabels.has);
 				
-				filesystem.createRelationshipTo(rootDirectory, RelationshipLabels.has).setProperty(MandatoryProperties.commitId.name(), commitId);
+				filesystem.createRelationshipTo(rootDirectory, RelationshipLabels.has);
 				filesystem.setProperty(MandatoryProperties.rootNodeId.name(), rootDirectory.getProperty(MandatoryProperties.nodeId.name()));
 				transaction.success();
 				return filesystemNodeId;

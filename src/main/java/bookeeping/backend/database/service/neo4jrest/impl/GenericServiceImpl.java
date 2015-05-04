@@ -1,6 +1,7 @@
 package bookeeping.backend.database.service.neo4jrest.impl;
 
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -68,6 +69,35 @@ public class GenericServiceImpl implements GenericService
 		try(Transaction transaction = this.graphDatabaseService.beginTx())
 		{
 			this.commonCode.deleteNodeTemporarily(commitId, nodeId);
+			transaction.success();
+		}
+	}
+	
+	@Override
+	public void changeNodeProperties(String nodeId, Map<String, Object> properties) throws NodeNotFound
+	{
+		try(Transaction transaction = this.graphDatabaseService.beginTx())
+		{
+			Node node = this.commonCode.getNode(nodeId);
+			for(Entry<String, Object> entry : properties.entrySet())
+			{
+				String key = entry.getKey();
+				boolean found = false;
+				for(MandatoryProperties mandatoryProperty : MandatoryProperties.values())
+				{
+					if(key.equals(mandatoryProperty.name()))
+					{
+						found = true;
+						break;
+					}
+				}
+				
+				if(!found)
+				{
+					node.setProperty(key, entry.getValue());
+				}
+			}
+			
 			transaction.success();
 		}
 	}

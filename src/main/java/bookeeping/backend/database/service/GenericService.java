@@ -12,4 +12,5 @@ public interface GenericService
 	public Map<String, Object> getNode(String nodeId) throws NodeNotFound;
 	public Map<String, Object> getNodeVersion(String nodeId, int version) throws NodeNotFound, VersionNotFound, NodeUnavailable;
 	public void deleteNodeTemporarily(String commitId, String nodeId) throws NodeNotFound, NodeUnavailable;
+	public void changeNodeProperties(String nodeId, Map<String, Object> properties) throws NodeNotFound;
 }

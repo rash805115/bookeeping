@@ -1,6 +1,7 @@
 package bookeeping.backend.database.service.titancassandraembedded.impl;
 
 import java.util.Map;
+import java.util.Map.Entry;
 
 import bookeeping.backend.database.MandatoryProperties;
 import bookeeping.backend.database.connection.singleton.TitanCassandraEmbeddedConnection;
@@ -91,6 +92,43 @@ public class GenericServiceImpl implements GenericService
 		try
 		{
 			this.commonCode.deleteNodeTemporarily(commitId, nodeId);
+			titanTransaction.commit();
+		}
+		finally
+		{
+			if(titanTransaction.isOpen())
+			{
+				titanTransaction.rollback();
+			}
+		}
+	}
+
+	@Override
+	public void changeNodeProperties(String nodeId, Map<String, Object> properties) throws NodeNotFound
+	{
+		TitanTransaction titanTransaction = this.titanGraph.newTransaction();
+		try
+		{
+			Vertex node = this.commonCode.getNode(nodeId);
+			for(Entry<String, Object> entry : properties.entrySet())
+			{
+				String key = entry.getKey();
+				boolean found = false;
+				for(MandatoryProperties mandatoryProperty : MandatoryProperties.values())
+				{
+					if(key.equals(mandatoryProperty.name()))
+					{
+						found = true;
+						break;
+					}
+				}
+				
+				if(!found)
+				{
+					node.setProperty(key, entry.getValue());
+				}
+			}
+			
 			titanTransaction.commit();
 		}
 		finally

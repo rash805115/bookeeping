@@ -53,7 +53,7 @@ public class FileServiceImpl implements FileService
 				directoryPath = directoryPath.length() == 0 ? "/" : directoryPath;
 				
 				Vertex parentDirectory = null;
-				if(directoryPath.length() == 0)
+				if(directoryPath.equals("/"))
 				{
 					parentDirectory = this.commonCode.getRootDirectory(userId, filesystemId, filesystemVersion);
 				}
